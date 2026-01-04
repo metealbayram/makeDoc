@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lawyer Management Dashboard</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#144bb8",
+                        "primary-dark": "#0f3a91",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "card-light": "#ffffff",
+                        "card-dark": "#1e2430",
+                        "text-main-light": "#0e121b",
+                        "text-main-dark": "#ffffff",
+                        "text-secondary-light": "#4e6797",
+                        "text-secondary-dark": "#94a3b8",
+                        "border-light": "#e7ebf3",
+                        "border-dark": "#2e3645",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main-light dark:text-text-main-dark antialiased selection:bg-primary/20">
+<div class="flex min-h-screen w-full flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6 py-3 shadow-sm">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="flex size-8 items-center justify-center rounded bg-primary text-white">
+<span class="material-symbols-outlined" style="font-size: 20px;">gavel</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight text-text-main-light dark:text-white">LawyerPro</h2>
+</div>
+<!-- Search Bar -->
+<div class="hidden md:flex relative w-64">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark material-symbols-outlined" style="font-size: 20px;">search</span>
+<input class="h-10 w-full rounded-lg border-none bg-background-light dark:bg-background-dark pl-10 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/50 placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark" placeholder="Search cases, docs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<!-- Navigation Links (Desktop) -->
+<nav class="hidden lg:flex items-center gap-6">
+<a class="text-sm font-semibold text-primary" href="#">Dashboard</a>
+<a class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="#">Cases</a>
+<a class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="#">Documents</a>
+<a class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="#">Calendar</a>
+<a class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="#">Billing</a>
+</nav>
+<div class="flex items-center gap-3">
+<button class="relative flex size-10 items-center justify-center rounded-full hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 rounded-full bg-red-500 border border-white dark:border-card-dark"></span>
+</button>
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-10 w-10 overflow-hidden rounded-full border border-border-light dark:border-border-dark bg-gray-100 dark:bg-gray-800" data-alt="User profile picture">
+<img alt="User Profile" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCt0TALyz-f8ePHKtmmx4Mg22GZLuFwjx5nKnf5YnnnV4I5unEMNmdHKKmlxFyeYvopg5tEysKrpvrsSbaaBBrNLYrgW3iUSPt0qLDdxBYkrXwSZVlzb-IYGOvEnMQWv7RqGkdzJSXxq9ewQeqpa5HX3s2-6-g6jHxdI8BIK6JjToilX7J8b6kdowxCxTl_F35CdTULrFx6qk_mK1bt6imPAS0fUrjlF5BkmUogAEcxAFDYSm4alVzH9kkPcBvDeYLpaV958VvBN3Y"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-6 py-8 md:px-10 lg:px-20 mx-auto w-full max-w-[1400px]">
+<!-- Page Heading -->
+<div class="mb-8 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+<div>
+<h1 class="text-3xl font-black tracking-tight text-text-main-light dark:text-white mb-2">Dashboard</h1>
+<p class="text-text-secondary-light dark:text-text-secondary-dark">Welcome back, John. You have <span class="font-bold text-primary">3 upcoming hearings</span> today.</p>
+</div>
+<div class="mt-4 md:mt-0 flex gap-3">
+<button class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-primary-dark transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+                        New Case
+                    </button>
+<button class="flex items-center gap-2 rounded-lg bg-white dark:bg-card-dark border border-border-light dark:border-border-dark px-4 py-2 text-sm font-bold text-text-main-light dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">upload_file</span>
+                        Upload Doc
+                    </button>
+</div>
+</div>
+<!-- Stats Grid -->
+<div class="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+<!-- Stat Card 1 -->
+<div class="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 shadow-sm transition-all hover:shadow-md">
+<div class="flex items-start justify-between mb-4">
+<div class="flex size-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined">folder_open</span>
+</div>
+<span class="flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-bold text-green-700 dark:text-green-400">
+<span class="material-symbols-outlined" style="font-size: 14px;">trending_up</span> 5%
+                        </span>
+</div>
+<p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Active Cases</p>
+<p class="text-2xl font-bold text-text-main-light dark:text-white mt-1">24</p>
+</div>
+<!-- Stat Card 2 -->
+<div class="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 shadow-sm transition-all hover:shadow-md">
+<div class="flex items-start justify-between mb-4">
+<div class="flex size-10 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+<span class="material-symbols-outlined">event</span>
+</div>
+<span class="flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-bold text-green-700 dark:text-green-400">
+<span class="material-symbols-outlined" style="font-size: 14px;">trending_up</span> 12%
+                        </span>
+</div>
+<p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Appointments</p>
+<p class="text-2xl font-bold text-text-main-light dark:text-white mt-1">8</p>
+</div>
+<!-- Stat Card 3 -->
+<div class="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 shadow-sm transition-all hover:shadow-md">
+<div class="flex items-start justify-between mb-4">
+<div class="flex size-10 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
+<span class="material-symbols-outlined">assignment_late</span>
+</div>
+<span class="flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-900/20 px-2 py-0.5 text-xs font-bold text-red-600 dark:text-red-400">
+<span class="material-symbols-outlined" style="font-size: 14px;">trending_down</span> 2%
+                        </span>
+</div>
+<p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Pending Tasks</p>
+<p class="text-2xl font-bold text-text-main-light dark:text-white mt-1">12</p>
+</div>
+<!-- Stat Card 4 -->
+<div class="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 shadow-sm transition-all hover:shadow-md">
+<div class="flex items-start justify-between mb-4">
+<div class="flex size-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">
+<span class="material-symbols-outlined">attach_money</span>
+</div>
+<span class="flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-bold text-green-700 dark:text-green-400">
+<span class="material-symbols-outlined" style="font-size: 14px;">trending_up</span> 8%
+                        </span>
+</div>
+<p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Revenue (MTD)</p>
+<p class="text-2xl font-bold text-text-main-light dark:text-white mt-1">$14,250</p>
+</div>
+</div>
+<!-- Content Split -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+<!-- Left Column (Wide) -->
+<div class="xl:col-span-2 flex flex-col gap-8">
+<!-- Recent Documents Table -->
+<div class="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
+<div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
+<h3 class="text-lg font-bold text-text-main-light dark:text-white">Recent Documents</h3>
+<a class="text-sm font-semibold text-primary hover:underline" href="#">View All</a>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead class="bg-background-light dark:bg-background-dark/50 text-xs uppercase text-text-secondary-light dark:text-text-secondary-dark">
+<tr>
+<th class="px-6 py-3 font-semibold">Document Name</th>
+<th class="px-6 py-3 font-semibold">Client / Case</th>
+<th class="px-6 py-3 font-semibold">Date</th>
+<th class="px-6 py-3 font-semibold">Status</th>
+<th class="px-6 py-3 font-semibold text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-light dark:divide-border-dark">
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex size-8 shrink-0 items-center justify-center rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined text-lg">description</span>
+</div>
+<span class="font-medium text-text-main-light dark:text-white">Smith_Contract_v2.pdf</span>
+</div>
+</td>
+<td class="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                                            Smith vs. Jones
+                                        </td>
+<td class="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                                            Today, 10:23 AM
+                                        </td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-400">
+                                                Draft
+                                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex size-8 shrink-0 items-center justify-center rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined text-lg">description</span>
+</div>
+<span class="font-medium text-text-main-light dark:text-white">Motion_to_Dismiss.docx</span>
+</div>
+</td>
+<td class="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                                            Estate of H. Wells
+                                        </td>
+<td class="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                                            Yesterday
+                                        </td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-400">
+                                                Review
+                                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex size-8 shrink-0 items-center justify-center rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+<span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+</div>
+<span class="font-medium text-text-main-light dark:text-white">Settlement_Final.pdf</span>
+</div>
+</td>
+<td class="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                                            Corp Mergers Inc.
+                                        </td>
+<td class="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                                            Oct 24, 2023
+                                        </td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:text-green-400">
+                                                Signed
+                                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Client Invoices (Empty State) -->
+<div class="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
+<div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
+<h3 class="text-lg font-bold text-text-main-light dark:text-white">Pending Invoices</h3>
+<button class="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-white">
+<span class="material-symbols-outlined">refresh</span>
+</button>
+</div>
+<div class="flex flex-col items-center justify-center px-6 py-12 text-center">
+<div class="mb-4 flex size-16 items-center justify-center rounded-full bg-background-light dark:bg-background-dark">
+<span class="material-symbols-outlined text-3xl text-text-secondary-light dark:text-text-secondary-dark">inbox</span>
+</div>
+<h4 class="text-base font-semibold text-text-main-light dark:text-white">All caught up!</h4>
+<p class="mt-1 max-w-xs text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                There are no pending invoices to review at this time.
+                            </p>
+<button class="mt-6 text-sm font-bold text-primary hover:text-primary-dark">
+                                View Past Invoices
+                            </button>
+</div>
+</div>
+</div>
+<!-- Right Column (Narrow) -->
+<div class="flex flex-col gap-8">
+<!-- Today's Agenda -->
+<div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
+<div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
+<h3 class="text-lg font-bold text-text-main-light dark:text-white">Today's Agenda</h3>
+<span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">Oct 26, 2023</span>
+</div>
+<div class="p-4">
+<!-- Timeline Items -->
+<div class="relative flex gap-4 pb-6">
+<div class="flex flex-col items-center">
+<div class="size-3 rounded-full bg-primary ring-4 ring-primary/20"></div>
+<div class="h-full w-0.5 bg-border-light dark:bg-border-dark mt-2"></div>
+</div>
+<div class="flex-1 pb-2">
+<p class="text-xs font-semibold text-primary mb-1">09:00 AM</p>
+<div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
+<p class="font-semibold text-sm text-text-main-light dark:text-white">Client Meeting: Sarah Connor</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">Review estate planning documents</p>
+</div>
+</div>
+</div>
+<div class="relative flex gap-4 pb-6">
+<div class="flex flex-col items-center">
+<div class="size-3 rounded-full bg-orange-500 ring-4 ring-orange-500/20"></div>
+<div class="h-full w-0.5 bg-border-light dark:bg-border-dark mt-2"></div>
+</div>
+<div class="flex-1 pb-2">
+<p class="text-xs font-semibold text-orange-500 mb-1">11:30 AM</p>
+<div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
+<p class="font-semibold text-sm text-text-main-light dark:text-white">Court Hearing: Case #4421</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">District Court, Room 4B</p>
+</div>
+</div>
+</div>
+<div class="relative flex gap-4">
+<div class="flex flex-col items-center">
+<div class="size-3 rounded-full bg-green-500 ring-4 ring-green-500/20"></div>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-green-500 mb-1">03:00 PM</p>
+<div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
+<p class="font-semibold text-sm text-text-main-light dark:text-white">Internal Team Sync</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">Zoom Meeting</p>
+</div>
+</div>
+</div>
+</div>
+<div class="border-t border-border-light dark:border-border-dark p-3">
+<button class="w-full rounded-lg py-2 text-sm font-semibold text-text-secondary-light hover:bg-background-light dark:text-text-secondary-dark dark:hover:bg-background-dark transition-colors">
+                                View Full Calendar
+                            </button>
+</div>
+</div>
+<!-- System Status (Loading State Simulation) -->
+<div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm p-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-sm font-bold text-text-main-light dark:text-white">System Storage</h3>
+<span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark text-lg">cloud_queue</span>
+</div>
+<!-- Skeleton Loading State for Chart/Data -->
+<div class="animate-pulse space-y-4">
+<div class="h-2 w-full rounded bg-gray-200 dark:bg-gray-700">
+<div class="h-2 w-3/4 rounded bg-primary"></div>
+</div>
+<div class="flex justify-between">
+<div class="h-3 w-12 rounded bg-gray-200 dark:bg-gray-700"></div>
+<div class="h-3 w-12 rounded bg-gray-200 dark:bg-gray-700"></div>
+</div>
+<div class="pt-2">
+<div class="flex gap-3">
+<div class="h-8 w-8 rounded bg-gray-200 dark:bg-gray-700"></div>
+<div class="flex-1 space-y-2">
+<div class="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-700"></div>
+<div class="h-2 w-1/2 rounded bg-gray-200 dark:bg-gray-700"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Contacts -->
+<div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
+<div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
+<h3 class="text-lg font-bold text-text-main-light dark:text-white">Recent Contacts</h3>
+</div>
+<div class="p-4 flex flex-col gap-3">
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer transition-colors">
+<div class="h-10 w-10 rounded-full bg-cover bg-center" data-alt="Portrait of Sarah Jenkins" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBW3ekANB9cCAjEPq8VVWrS0oZkhXCXMJiHR7yz77dTYwyXiRzatlNKLqFY-CLoDz8O0leQJGpvcVbPyxHw9Ds8N5kI5Wl0pwm5HtEhZEONhkjjujDi5tg0SD8WdD7UXyREj4YTOLETLK6SuWKYjTkzetT877Z1dM5kb_Te6xoZqnZ84MUt5AgKASurUik4uGpQLbXqzq0r8sbfbXW0z6N_wEEW12EwGQp81EUCMhRGRy4pN-bKiaQcSphFLIxf0boQ8SVZCuSAxo0');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-text-main-light dark:text-white truncate">Sarah Jenkins</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate">Client - Estate Case</p>
+</div>
+<button class="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark">
+<span class="material-symbols-outlined text-lg">mail</span>
+</button>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer transition-colors">
+<div class="h-10 w-10 rounded-full bg-cover bg-center" data-alt="Portrait of Michael Ross" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA-Ky6Lzs3xHZQICWf8kbHDupmFWTKQbybDReExYSKpjZEz9TuBWzgJOZTVB_EUYfpY-mX21r7tUHzwWyUXCGAcPdkDjdYhisIG33Oizg8P-4YwogBbW-j9EcZCU3XIJ5HU5gLge1hk_5F3l8f69GA78k_3j21f4gvVA9qpxrmde1mGyIZTmYVPdBmukOqsGKPzcMaIpftH-kO2tif-S79LbhyAB0xBgYIgcHIFTuxHvzlW6UbXtT3eElRDo7iyT8rgsMcpYV0vkco');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-text-main-light dark:text-white truncate">Michael Ross</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate">Associate Partner</p>
+</div>
+<button class="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark">
+<span class="material-symbols-outlined text-lg">mail</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
