@@ -33,6 +33,14 @@ export default function App() {
             }
         />
         <Route
+            path="/edit-document/:id"
+            element={
+                <ProtectedRoute>
+                    <CreateDocumentPage />
+                </ProtectedRoute>
+            }
+        />
+        <Route
           path="/dashboard"
           element={
             <ProtectedRoute>

@@ -409,6 +409,9 @@ export default function DocumentsPage() {
                                             <button onClick={() => handleDownloadDocument(doc)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Download">
                                                 <span className="material-symbols-outlined text-[20px]">download</span>
                                             </button>
+                                            <button onClick={() => navigate(`/edit-document/${doc._id}`)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Edit">
+                                                <span className="material-symbols-outlined text-[20px]">edit</span>
+                                            </button>
                                             <button onClick={() => confirmDeleteDocument(doc._id)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Delete">
                                                 <span className="material-symbols-outlined text-[20px]">delete</span>
                                             </button>

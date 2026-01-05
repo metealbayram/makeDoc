@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import api from "../services/api"
 
 
@@ -10,15 +10,38 @@ const INITIAL_CONTENT = `
 
 
 export default function CreateDocumentPage() {
+  const { id } = useParams();
   const [title, setTitle] = useState("")
   const [name, setName] = useState("")
-  const [content] = useState(INITIAL_CONTENT)
+  const [content, setContent] = useState(INITIAL_CONTENT)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-      if (editorRef.current) {
+    if (id) {
+        const fetchDocument = async () => {
+            try {
+                const response = await api.get(`/documents/${id}`);
+                const doc = response.data.data;
+                setTitle(doc.title);
+                setName(doc.name);
+                setContent(doc.content);
+                if (editorRef.current) {
+                    editorRef.current.innerHTML = doc.content;
+                }
+            } catch (error) {
+                console.error("Failed to load document", error);
+                alert("Failed to load document for editing");
+                navigate("/documents");
+            }
+        };
+        fetchDocument();
+    }
+  }, [id, navigate]);
+
+  useEffect(() => {
+      if (editorRef.current && !id) {
           editorRef.current.innerHTML = content;
       }
   }, []);
@@ -29,16 +52,24 @@ export default function CreateDocumentPage() {
         // Collect current content from contenteditable div if ref exists
         const currentContent = editorRef.current ? editorRef.current.innerHTML : content;
 
-        await api.post("/documents/create", { 
-            title: title || "New Document", 
-            name: name || "Unknown Client", 
-            content: currentContent, 
-            status: "Draft" 
-        })
+        if (id) {
+            await api.put(`/documents/${id}`, { 
+                title: title || "Untitled Document", 
+                name: name || "Unknown Client", 
+                content: currentContent
+            })
+        } else {
+            await api.post("/documents/create", { 
+                title: title || "New Document", 
+                name: name || "Unknown Client", 
+                content: currentContent, 
+                status: "Draft" 
+            })
+        }
         navigate("/documents")
     } catch (err: any) {
       console.error(err)
-      alert("Failed to create document")
+      alert("Failed to save document")
     } finally {
       setLoading(false)
     }
@@ -401,7 +432,7 @@ export default function CreateDocumentPage() {
             <div className="flex items-center gap-2 text-sm">
                 <a className="text-slate-500 hover:text-primary transition-colors" href="/documents">Documents</a>
                 <span className="text-slate-400 material-symbols-outlined text-[16px]">chevron_right</span>
-                <span className="text-slate-900 dark:text-white font-medium">Create New</span>
+                <span className="text-slate-900 dark:text-white font-medium">{id ? "Edit Document" : "Create New"}</span>
             </div>
             <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-400 hidden sm:block mr-2">
@@ -423,7 +454,7 @@ export default function CreateDocumentPage() {
                     text-sm font-medium shadow-sm transition-all shadow-blue-500/20
                     disabled:opacity-50
                     ">
-                    {loading ? "Saving..." : "Save Document"}
+                    {loading ? "Saving..." : (id ? "Update Document" : "Save Document")}
                 </button>
             </div>
         </header>
@@ -433,8 +464,12 @@ export default function CreateDocumentPage() {
             <div className="max-w-5xl mx-auto flex flex-col gap-6 pb-20">
                 {/* Page Heading */}
                 <div className="flex flex-col gap-1 mb-2">
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Create Document</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Draft a new legal document for a client case file.</p>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                        {id ? "Edit Document" : "Create Document"}
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400">
+                        {id ? "Modify existing document details or content." : "Draft a new legal document for a client case file."}
+                    </p>
                 </div>
 
                 {/* Metadata Card */}
