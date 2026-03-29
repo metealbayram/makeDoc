@@ -8,7 +8,7 @@ export const signUp = async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, job } = req.body;
         const existingUser = await lawyer.findOne({ email });
         if(existingUser) {
             const error = new Error('User already exists');
@@ -26,7 +26,8 @@ export const signUp = async (req, res, next) => {
             name, 
             email, 
             password: hashedPassword,
-            profileImage
+            profileImage,
+            job: job || 'Lawyer'
         }], { session });
         const token = jwt.sign({ userId: newUser[0]._id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
         await session.commitTransaction();

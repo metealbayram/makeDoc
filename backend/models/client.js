@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const ClientSchema = new mongoose.Schema({
+    lawyer: { type: mongoose.Schema.Types.ObjectId, ref: 'Lawyer', required: true },
     name: { type: String, required: true },
     tcNo: { type: String, required: true, unique: true },
     phone: String,

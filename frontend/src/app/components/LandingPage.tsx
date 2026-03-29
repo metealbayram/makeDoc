@@ -58,14 +58,7 @@ export default function LandingPage() {
                   Watch Demo
                 </button>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-light dark:text-muted-dark mt-4">
-                <div className="flex -space-x-2">
-                  <img alt="Professional woman portrait" className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-gray-900 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXz1fqwjuIZ0eFBy2Y4dTxT2fRrXjHWXvKZRMqnxmp4N_x6vtrfZ1VQtK4ntigOEL1c4EDkhdDotSyFrq04szu2C0o0O4yWkw-4qpFnUCy9OuJxijNhJKoUmEgfm8kx5zfo74_20Vc4i2cpVvvnwO1wsiwBMllXS6B9FTe-CbUAOfJnatP4MiO5DZYDDoNAhzhwZKD2VVEyX_M9QZ8CetosxN11RCG9hx4EhGtfy3TzK5GGSDO5gO85Q3zXyj7fdbj7Q-cOqsLbWY"/>
-                  <img alt="Professional man portrait" className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-gray-900 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKx8yVbTmA1H5NQ-9XDI3yCoIUlnjOR8Mt0vltptZGKzp-FgPlshccrnxQOxuwwgd_gwURsP-irbQ0NcXURK4kZwxsYjOvcb65RCUuYsrxaIIjXRmI3K8dI2rMAYrAtZcMmypnMmpvceh2a88KHQSvFUU3bQJMdvAXrYZdpsqLMqsRtsc6eYmJzxbruwaLui6NwTHSCWp6ug96n85R4ctHaZVLP5mWpbYXqbpBEhdLgblWVwkqP24-ZXA4hoWlqVjLTYmFD_mTRIA"/>
-                  <img alt="Professional man portrait" className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-gray-900 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA11zzaMTSkJHqwBMDsl4hRQJwEgCsogcItLiA51oklSexw8jPiN-WPbbPjAJotBENA2qgD3KmIap3zdQ80C1QDnX39PF-OJHxnWJFP9eD9my4-x6vA6jeSmTiR77060CTYu8vegYVklgBmnYJqAyiUY17oiLi92Ghr9_XyayIBooxb6xYuZID8fAafwMv-juQg17sdvqWaTfrjurchNO1LSwBRGkW3JGXCmEo_ow_ef7p9liQDMwHEzOZb9WS-ckgG-tCrFBeGbgE"/>
-                </div>
-                <p>Trusted by 5,000+ lawyers</p>
-              </div>
+              
             </div>
             <div className="relative lg:h-auto h-[400px] w-full rounded-2xl overflow-hidden shadow-2xl shadow-blue-900/20 group">
               <div className="absolute inset-0 bg-gradient-to-tr from-login-primary/20 to-transparent mix-blend-multiply z-10 pointer-events-none"></div>
@@ -261,7 +254,7 @@ export default function LandingPage() {
           <p className="text-blue-100 text-lg mb-10 max-w-2xl mx-auto">Join over 5,000 legal professionals who have switched to JurisFlow to grow their practice and reclaim their time.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/sign-up">
-                <button className="h-12 px-8 rounded-lg bg-white text-login-primary font-bold hover:bg-gray-100 transition-colors shadow-lg">
+                <button className="h-12 px-8 rounded-lg bg-white text-login-primary font-bold hover:bg-gray-100 transition-colors shadow-lg dark:bg-[#1e2532]">
                     Start Your Free Trial
                 </button>
             </Link>

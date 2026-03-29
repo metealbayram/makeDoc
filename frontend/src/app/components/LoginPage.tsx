@@ -21,6 +21,7 @@ export default function LoginPage() {
       const { token, user } = response.data.data
       localStorage.setItem("token", token)
       localStorage.setItem("userName", user.name)
+      localStorage.setItem("userJob", user.job || "Lawyer")
       
       if (user.profileImage) {
         localStorage.setItem("userProfileImage", user.profileImage)

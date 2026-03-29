@@ -66,6 +66,7 @@ export default function SignUpPage() {
       if (response.data.data && response.data.data.token) {
         localStorage.setItem("token", response.data.data.token)
         localStorage.setItem("userName", response.data.data.user.name)
+        localStorage.setItem("userJob", response.data.data.user.job || "Lawyer")
         if (response.data.data.user.profileImage) {
           localStorage.setItem("userProfileImage", response.data.data.user.profileImage)
         } else {
@@ -296,7 +297,7 @@ export default function SignUpPage() {
                     <div className={`h-full w-1/4 rounded-full transition-colors ${strength >= 3 ? strengthColor : "bg-slate-200 dark:bg-slate-700"}`}></div>
                     <div className={`h-full w-1/4 rounded-full transition-colors ${strength >= 4 ? strengthColor : "bg-slate-200 dark:bg-slate-700"}`}></div>
                   </div>
-                   <p className="text-xs text-slate-500 mt-1">Password strength: <span className={`${strengthTextColor} font-medium`}>{strengthText}</span></p>
+                   <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">Password strength: <span className={`${strengthTextColor} font-medium`}>{strengthText}</span></p>
 
                   {/* Terms */}
                   <div className="flex items-start pt-2">

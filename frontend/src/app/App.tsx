@@ -8,13 +8,23 @@ import CreateDocumentPage from "./components/CreateDocumentPage"
 
 import DocumentsPage from "./components/DocumentsPage"
 import CalendarPage from "./components/CalendarPage"
+import FriendsPage from "./components/FriendsPage"
+import GroupsPage from "./components/GroupsPage"
+import MessagesPage from "./components/MessagesPage"
+import ClientsPage from "./components/ClientsPage"
+import GlobalNotification from "./components/GlobalNotification"
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const token = localStorage.getItem("token")
   if (!token) {
     return <Navigate to="/login" replace />
   }
-  return children
+  return (
+    <>
+      {children}
+      <GlobalNotification />
+    </>
+  )
 }
 
 export default function App() {
@@ -61,6 +71,38 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/friends"
+          element={
+            <ProtectedRoute>
+              <FriendsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups"
+          element={
+            <ProtectedRoute>
+              <GroupsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <MessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/clients"
+          element={
+            <ProtectedRoute>
+              <ClientsPage />
             </ProtectedRoute>
           }
         />

@@ -7,6 +7,11 @@ import authRoutes from './routes/auth.routes.js';
 import userRouter from './routes/user.routes.js';
 import documentRouter from "./routes/documents.routes.js";
 import eventsRouter from "./routes/events.routes.js";
+import friendsRouter from "./routes/friends.routes.js";
+import groupsRouter from "./routes/groups.routes.js";
+import messagesRouter from "./routes/messages.routes.js";
+import clientsRouter from "./routes/clients.routes.js";
+
 const app = express();
 app.use(cors({
     origin: (origin, callback) => {
@@ -23,6 +28,11 @@ app.use('/auth', authRoutes);
 app.use('/users', userRouter);
 app.use('/documents', documentRouter);
 app.use('/events', eventsRouter);
+app.use('/friends', friendsRouter);
+app.use('/groups', groupsRouter);
+app.use('/messages', messagesRouter);
+app.use('/clients', clientsRouter);
+
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use((err, req, res, next) => {

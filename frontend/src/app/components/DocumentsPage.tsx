@@ -1,447 +1,555 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import api from "../services/api"
-import { ModeToggle } from "@/app/components/mode-toggle"
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+
+import { Sidebar } from "./Sidebar";
+import { Navbar } from "./Navbar";
 
 interface Document {
-  _id: string
-  title: string
-  createdAt: string
-  status?: string
+  _id: string;
+  title: string;
+  createdAt: string;
+  status?: string;
 }
 
 export default function DocumentsPage() {
-  const navigate = useNavigate()
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [userName, setUserName] = useState("")
-  const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
-  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'all' | 'drafts' | 'archived'>('all')
+  const navigate = useNavigate();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userJob, setUserJob] = useState("");
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<
+    string | null
+  >(null);
+  const [filter, setFilter] = useState<"all" | "drafts" | "archived">("all");
 
   useEffect(() => {
-    const storedName = localStorage.getItem("userName")
-    const storedImage = localStorage.getItem("userProfileImage")
-    if (storedName) setUserName(storedName)
-    if (storedImage) setUserProfileImage(`http://localhost:5000${storedImage}`)
-  }, [])
+    const storedName = localStorage.getItem("userName");
+    const storedImage = localStorage.getItem("userProfileImage");
+    const storedJob = localStorage.getItem("userJob");
+    if (storedName) setUserName(storedName);
+    if (storedJob) setUserJob(storedJob);
+    if (storedImage) {
+      if (storedImage.startsWith("http")) {
+        setUserProfileImage(storedImage);
+      } else {
+        setUserProfileImage(`http://localhost:5000${storedImage}`);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchDocuments = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const url = searchTerm ? `/documents?search=${encodeURIComponent(searchTerm)}` : "/documents"
-        const response = await api.get(url)
-        setDocuments(response.data.data)
+        const url = searchTerm
+          ? `/documents?search=${encodeURIComponent(searchTerm)}`
+          : "/documents";
+        const response = await api.get(url);
+        setDocuments(response.data.data);
       } catch (error) {
-        console.error("Failed to fetch documents:", error)
+        console.error("Failed to fetch documents:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
     const timer = setTimeout(() => {
-        fetchDocuments()
-    }, 500)
+      fetchDocuments();
+    }, 500);
 
-    return () => clearTimeout(timer)
-  }, [searchTerm])
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("userName")
-    localStorage.removeItem("userProfileImage")
-    navigate("/login")
-  }
+
 
   const handleViewDocument = async (id: string) => {
-      try {
-          const response = await api.get(`/documents/${id}/download`, {
-              responseType: 'blob'
-          });
-          
-          const file = new Blob([response.data], { type: 'application/pdf' });
-          const fileURL = URL.createObjectURL(file);
-          window.open(fileURL, '_blank');
-      } catch (error) {
-          console.error("Error viewing document:", error);
-          alert("Could not load document.");
-      }
-  }
+    try {
+      const response = await api.get(`/documents/${id}/download`, {
+        responseType: "blob",
+      });
+      const file = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, "_blank");
+    } catch (error) {
+      console.error("Error viewing document:", error);
+    }
+  };
 
   const handleDownloadDocument = async (doc: Document) => {
-      try {
-          const response = await api.get(`/documents/${doc._id}/download`, {
-              responseType: 'blob'
-          });
-          
-          const file = new Blob([response.data], { type: 'application/pdf' });
-          const fileURL = URL.createObjectURL(file);
-          const link = document.createElement('a');
-          link.href = fileURL;
-          link.download = `${doc.title}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(fileURL);
-      } catch (error) {
-          console.error("Error downloading document:", error);
-          alert("Could not download document.");
-      }
-  }
+    try {
+      const response = await api.get(`/documents/${doc._id}/download`, {
+        responseType: "blob",
+      });
+      const file = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.download = `${doc.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(fileURL);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+    }
+  };
 
   const confirmDeleteDocument = (id: string) => {
-      setDeleteConfirmationId(id)
-  }
+    setDeleteConfirmationId(id);
+  };
 
   const handleDeleteDocument = async () => {
     if (!deleteConfirmationId) return;
-
     try {
-        await api.delete(`/documents/${deleteConfirmationId}`);
-        // Remove from local state
-        setDocuments(documents.filter(doc => doc._id !== deleteConfirmationId));
+      await api.delete(`/documents/${deleteConfirmationId}`);
+      setDocuments(documents.filter((doc) => doc._id !== deleteConfirmationId));
     } catch (error) {
-        console.error("Error deleting document:", error);
-        alert("Failed to delete document");
+      console.error("Error deleting document:", error);
     } finally {
-        setDeleteConfirmationId(null);
+      setDeleteConfirmationId(null);
     }
-  }
+  };
 
   const handleApproveDocument = async (id: string) => {
     try {
-        const response = await api.put(`/documents/${id}/status`, { status: "Approved" });
-        if (response.data.success) {
-            setDocuments(documents.map(doc => 
-                doc._id === id ? { ...doc, status: "Approved" } : doc
-            ));
-        }
+      const response = await api.put(`/documents/${id}/status`, {
+        status: "Approved",
+      });
+      if (response.data.success) {
+        setDocuments(
+          documents.map((doc) =>
+            doc._id === id ? { ...doc, status: "Approved" } : doc,
+          ),
+        );
+      }
     } catch (error) {
-        console.error("Error approving document:", error);
-        alert("Failed to approve document");
+      console.error("Error approving document:", error);
     }
-  }
+  };
 
-  const handleProfileImageUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileImageUpdate = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        if (file.size > 2 * 1024 * 1024) {
-             alert("File size must be less than 2MB");
-             return;
-        }
+      const file = e.target.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        alert("File size must be less than 10MB");
+        return;
+      }
 
-        const formData = new FormData();
-        formData.append('profileImage', file);
+      const formData = new FormData();
+      formData.append("profileImage", file);
 
-        try {
-            const response = await api.put("/users/profile/image", formData, {
-                  headers: {
-                      'Content-Type': 'multipart/form-data'
-                  }
-            });
-            
-            if (response.data.success) {
-                const newImagePath = response.data.data.profileImage;
-                localStorage.setItem("userProfileImage", newImagePath);
-                setUserProfileImage(`http://localhost:5000${newImagePath}`);
-            }
-        } catch (error) {
-            console.error("Failed to update profile image:", error);
-            alert("Failed to update profile image");
+      try {
+        const response = await api.put("/users/profile/image", formData);
+        if (response.data.success) {
+          const newImagePath = response.data.data.profileImage;
+          localStorage.setItem("userProfileImage", newImagePath);
+          setUserProfileImage(`http://localhost:5000${newImagePath}`);
         }
+      } catch (error) {
+        console.error("Failed to update profile image:", error);
+      }
     }
-  }
+  };
 
-  const filteredDocuments = documents.filter(doc => {
-      if (filter === 'drafts') return (!doc.status || doc.status === 'Draft');
-      if (filter === 'archived') return doc.status === 'Archived';
-      return true;
+  const filteredDocuments = documents.filter((doc) => {
+    if (filter === "drafts") return !doc.status || doc.status === "Draft";
+    if (filter === "archived") return doc.status === "Archived";
+    return true;
   });
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased min-h-screen flex flex-col">
-      
+    <div className="bg-surface text-on-surface antialiased overflow-x-hidden min-h-screen dark:bg-[#111621] dark:text-white">
       {/* Delete Confirmation Modal */}
+      <Navbar
+        userName={userName}
+        userProfileImage={userProfileImage}
+        onProfileImageUpdate={handleProfileImageUpdate}
+      />
+      <Sidebar
+        userName={userName}
+        userJob={userJob}
+        userProfileImage={userProfileImage}
+        onProfileImageUpdate={handleProfileImageUpdate}
+      />
       {deleteConfirmationId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity animate-in fade-in-0">
-          <div className="w-full max-w-md mx-4 bg-card-light dark:bg-card-dark rounded-xl shadow-lg border border-border-light dark:border-border-dark p-6 animate-in zoom-in-95">
-             <h3 className="text-lg font-bold mb-2">Confirm Deletion</h3>
-             <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-6">
-                Are you sure you want to delete this document? This action cannot be undone.
-             </p>
-             <div className="flex justify-end gap-2">
-                 <button className="px-4 py-2 rounded-lg text-sm font-semibold border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors" onClick={() => setDeleteConfirmationId(null)}>Cancel</button>
-                 <button className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors" onClick={handleDeleteDocument}>Delete</button>
-             </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-8 shadow-2xl animate-in zoom-in-95 font-sans dark:bg-[#1e2532]">
+            <h3 className="text-xl font-black mb-2 font-headline">
+              Delete Doc?
+            </h3>
+            <p className="text-sm text-on-surface-variant mb-8 dark:text-slate-400">
+              This action is permanent and cannot be reversed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 py-3 font-bold border border-outline rounded-xl hover:bg-surface-container-low transition-colors"
+                onClick={() => setDeleteConfirmationId(null)}
+              >
+                Keep it
+              </button>
+              <button
+                className="flex-1 py-3 font-bold bg-error text-on-error rounded-xl shadow-lg shadow-error/20 hover:opacity-90 transition-all"
+                onClick={handleDeleteDocument}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Top Navigation (Consistent with Dashboard) */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6 py-3 shadow-sm">
-        <div className="flex items-center gap-8">
-            <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded bg-login-primary text-white">
-                    <span className="material-symbols-outlined text-[20px]">description</span>
-                </div>
-                <h2 className="text-xl font-bold tracking-tight text-text-main-light dark:text-white">MakeDoc</h2>
-            </div>
-        </div>
-        <div className="flex items-center gap-6">
-            <nav className="hidden lg:flex items-center gap-6">
-                <a className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="/dashboard">Dashboard</a>
-               
-                <a className="text-sm font-semibold text-primary" href="/documents">Documents</a>
-                <a className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="/calendar">Calendar</a>
-            </nav>
-            <div className="flex items-center gap-3">
-                 <ModeToggle />
-                 
-                 <div className="relative group">
-                    <div className="h-10 w-10 overflow-hidden rounded-full border border-border-light dark:border-border-dark bg-gray-100 dark:bg-gray-800 relative cursor-pointer">
-                        <input 
-                            type="file" 
-                            className="absolute inset-0 opacity-0 z-20 cursor-pointer" 
-                            accept="image/*"
-                            onChange={handleProfileImageUpdate}
-                        />
-                        {userProfileImage ? (
-                            <img alt={userName} className="h-full w-full object-cover" src={userProfileImage}/>
-                        ) : (
-                             <div className="h-full w-full flex items-center justify-center text-primary font-bold">
-                                {userName.charAt(0).toUpperCase()}
-                             </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                            <span className="material-symbols-outlined text-white text-[16px]">edit</span>
-                        </div>
-                    </div>
-                </div>
 
-                 <button onClick={handleLogout} className="flex size-10 items-center justify-center rounded-full hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark transition-colors" title="Logout">
-                    <span className="material-symbols-outlined">logout</span>
-                 </button>
-            </div>
-        </div>
-      </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 max-w-[1400px] mx-auto w-full">
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
-            <a className="hover:text-primary transition-colors flex items-center gap-1" href="/dashboard">
-                <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                Dashboard
-            </a>
-            <span className="material-symbols-outlined text-[16px] text-slate-300">chevron_right</span>
-            <span className="font-medium text-slate-900 dark:text-white">Documents</span>
-        </div>
-
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
+      <main className="ml-72 pt-28 px-12 pb-12 min-h-screen">
+        <div className="max-w-[1600px] mx-auto">
+          {/* Page Header */}
+          <div className="flex justify-between items-end mb-10">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Documents</h1>
-                <p className="text-slate-500 dark:text-slate-400 max-w-2xl">Manage legal case files, contracts, and internal records securely.</p>
+              <nav className="flex items-center gap-2 text-xs font-medium text-on-surface-variant mb-2 dark:text-slate-400">
+                <span>Workspace</span>
+                <span className="material-symbols-outlined text-xs">
+                  chevron_right
+                </span>
+                <span className="text-primary font-bold">Documents</span>
+              </nav>
+              <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-headline dark:text-white">
+                Documents
+              </h1>
             </div>
-            <button 
-                onClick={() => navigate("/create-document")}
-                className="shrink-0 flex items-center gap-2 px-4 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-sm font-medium shadow-md transition-transform active:scale-95"
+            <button
+              onClick={() => navigate("/create-document")}
+              className="bg-gradient-to-br from-primary to-primary-dim text-on-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2 shadow-xl shadow-primary/10 hover:scale-105 transition-transform"
             >
-                <span className="material-symbols-outlined text-[20px]">add</span>
-                Create Document
+              <span className="material-symbols-outlined">note_add</span>
+              Create Document
             </button>
-        </div>
+          </div>
 
-        {/* Controls: Search & Tabs */}
-        <div className="mb-6 flex flex-col gap-4">
-            {/* Search Bar */}
-            <div className="w-full">
-                <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors">search</span>
-                    </div>
-                    <input 
-                        className="block w-full pl-10 pr-3 py-3 border-none ring-1 ring-slate-200 dark:ring-slate-700 rounded-lg leading-5 bg-surface-light dark:bg-surface-dark placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm shadow-sm transition-all" 
-                        placeholder="Search by document name, case reference, or type..." 
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
+          <div className="space-y-8 font-sans">
+            {/* Filters & Search Bar Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-center p-1 bg-slate-100 rounded-2xl w-fit">
+                <button
+                  onClick={() => setFilter("all")}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "all" ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  All Documents
+                </button>
+                <button
+                  onClick={() => setFilter("drafts")}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "drafts" ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  Drafts
+                </button>
+                <button
+                  onClick={() => setFilter("archived")}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "archived" ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  Archived
+                </button>
+              </div>
+              <div className="relative w-full md:w-[400px]">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-slate-400">
+                  search
+                </span>
+                <input
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-4 focus:ring-primary/10 shadow-sm placeholder:text-outline transition-all dark:bg-[#1e2532] dark:border-[#2e3645]"
+                  placeholder="Search by name, type, or case ref..."
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-            {/* Filter Chips */}
-            <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
-                <button 
-                    onClick={() => setFilter('all')}
-                    className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
-                        filter === 'all' 
-                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md" 
-                        : "bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                    }`}
-                >
-                    All Documents
-                </button>
-                
-                
-                <button 
-                    onClick={() => setFilter('drafts')}
-                    className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
-                        filter === 'drafts' 
-                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md" 
-                        : "bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                    }`}
-                >
-                    Drafts
-                    <span className="flex h-2 w-2 rounded-full bg-yellow-500"></span>
-                </button>
-                <button 
-                    onClick={() => setFilter('archived')}
-                    className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
-                        filter === 'archived' 
-                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md" 
-                        : "bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                    }`}
-                >
-                    Archived
-                </button>
-            </div>
-        </div>
 
-        {/* Main Data Table Card */}
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden mb-12">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="border-b border-border-light dark:border-border-dark bg-slate-50/50 dark:bg-slate-800/50">
-                            <th className="p-4 w-12">
-                                <input className="rounded border-slate-300 text-primary focus:ring-primary bg-transparent" type="checkbox"/>
-                            </th>
-                            <th className="p-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
-                            <th className="p-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Case Reference</th>
-                            <th className="p-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</th>
-                            <th className="p-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date Added</th>
-                            <th className="p-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                            <th className="p-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                        {loading ? (
-                            <tr>
-                                <td colSpan={7} className="p-8 text-center text-slate-500">Loading documents...</td>
-                            </tr>
-                        ) : filteredDocuments.length === 0 ? (
-                            <tr>
-                                <td colSpan={7} className="p-12 text-center">
-                                    <div className="flex flex-col items-center justify-center">
-                                        <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-4">
-                                            <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600">folder_open</span>
-                                        </div>
-                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No documents found</h3>
-                                        <p className="text-slate-500 dark:text-slate-400 max-w-xs mb-6">
-                                            {filter === 'all' 
-                                                ? "You haven't uploaded any documents yet. Get started by creating your first legal document." 
-                                                : `No ${filter} documents found.`}
-                                        </p>
-                                        <button 
-                                            onClick={() => navigate("/create-document")}
-                                            className="shrink-0 flex items-center gap-2 px-4 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-sm font-medium shadow-md transition-transform active:scale-95 "
-                                        >
-                                            <span className="material-symbols-outlined text-lg">add</span>
-                                            Create Document
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : (
-                            filteredDocuments.map((doc) => (
-                                <tr key={doc._id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                    <td className="p-4">
-                                        <input className="rounded border-slate-300 text-primary focus:ring-primary bg-transparent opacity-0 group-hover:opacity-100 transition-opacity" type="checkbox"/>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                                                <span className="material-symbols-outlined">description</span>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-slate-900 dark:text-white">{doc.title}</div>
-                                                <div className="text-xs text-slate-500">1.2 MB</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
-                                            #CASE-{doc._id.substring(0,6).toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-sm text-slate-600 dark:text-slate-300">
-                                        General
-                                    </td>
-                                    <td className="p-4 text-sm text-slate-600 dark:text-slate-300">
-                                        {new Date(doc.createdAt).toLocaleDateString("tr-TR")}
-                                    </td>
-                                    <td className="p-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                            doc.status === 'Approved'
-                                                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-100 dark:border-green-800'
-                                                : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-100 dark:border-yellow-800'
-                                        }`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${doc.status === 'Approved' ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
-                                            {doc.status || "Draft"}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            {(!doc.status || doc.status === 'Draft') && (
-                                                <button 
-                                                    onClick={() => handleApproveDocument(doc._id)} 
-                                                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" 
-                                                    title="Approve"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                                                </button>
-                                            )}
-                                            <button onClick={() => handleViewDocument(doc._id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="View">
-                                                <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                            </button>
-                                            <button onClick={() => handleDownloadDocument(doc)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Download">
-                                                <span className="material-symbols-outlined text-[20px]">download</span>
-                                            </button>
-                                            <button onClick={() => navigate(`/edit-document/${doc._id}`)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Edit">
-                                                <span className="material-symbols-outlined text-[20px]">edit</span>
-                                            </button>
-                                            <button onClick={() => confirmDeleteDocument(doc._id)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Delete">
-                                                <span className="material-symbols-outlined text-[20px]">delete</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-            
-            {/* Pagination (Static) */}
-            {documents.length > 0 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t border-border-light dark:border-border-dark bg-slate-50/50 dark:bg-slate-800/30">
-                    <div className="text-sm text-slate-500 dark:text-slate-400">
-                        Showing <span className="font-medium text-slate-900 dark:text-white">1</span> to <span className="font-medium text-slate-900 dark:text-white">{documents.length}</span> of <span className="font-medium text-slate-900 dark:text-white">{documents.length}</span> results
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                            Previous
-                        </button>
-                        <button className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
-                            Next
-                        </button>
-                    </div>
+            <div className="bg-white rounded-lg shadow-[0_20px_40px_rgba(36,49,86,0.04)] overflow-hidden dark:bg-[#1e2532]">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="py-5 px-6 w-12">
+                      <input
+                        className="rounded-sm border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-700"
+                        type="checkbox"
+                      />
+                    </th>
+                    <th className="py-5 px-6 text-sm font-bold text-on-surface-variant uppercase tracking-wider dark:text-slate-400">
+                      Name
+                    </th>
+                    <th className="py-5 px-6 text-sm font-bold text-on-surface-variant uppercase tracking-wider dark:text-slate-400">
+                      Case Reference
+                    </th>
+                    <th className="py-5 px-6 text-sm font-bold text-on-surface-variant uppercase tracking-wider dark:text-slate-400">
+                      Type
+                    </th>
+                    <th className="py-5 px-6 text-sm font-bold text-on-surface-variant uppercase tracking-wider dark:text-slate-400">
+                      Date Added
+                    </th>
+                    <th className="py-5 px-6 text-sm font-bold text-on-surface-variant uppercase tracking-wider dark:text-slate-400">
+                      Status
+                    </th>
+                    <th className="py-5 px-6 text-sm font-bold text-on-surface-variant uppercase tracking-wider text-right dark:text-slate-400">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="p-20 text-center text-on-surface-variant italic dark:text-slate-400"
+                      >
+                        Loading documents...
+                      </td>
+                    </tr>
+                  ) : filteredDocuments.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-20 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 dark:bg-[#111621]">
+                            <span className="material-symbols-outlined text-4xl">
+                              folder_open
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-on-surface dark:text-white">
+                            No documents found
+                          </h3>
+                          <p className="text-on-surface-variant max-w-xs dark:text-slate-400">
+                            You haven't uploaded any documents yet.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDocuments.map((doc) => (
+                      <tr
+                        key={doc._id}
+                        className="group hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-5 px-6">
+                          <input
+                            className="rounded-sm border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-700"
+                            type="checkbox"
+                          />
+                        </td>
+                        <td className="py-5 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                              <span className="material-symbols-outlined">
+                                picture_as_pdf
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-bold text-on-surface dark:text-white">
+                                {doc.title}
+                              </p>
+                              <p className="text-xs text-on-surface-variant dark:text-slate-400">
+                                2.4 MB
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-5 px-6">
+                          <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs font-bold font-mono">
+                            #CASE-{doc._id.substring(0, 6).toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-5 px-6">
+                          <span className="text-sm font-medium text-on-surface-variant dark:text-slate-400">
+                            Legal File
+                          </span>
+                        </td>
+                        <td className="py-5 px-6">
+                          <span className="text-sm text-on-surface-variant dark:text-slate-400">
+                            {new Date(doc.createdAt).toLocaleDateString(
+                              "tr-TR",
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-5 px-6">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${doc.status === "Approved" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${doc.status === "Approved" ? "bg-green-500" : "bg-yellow-500"}`}
+                            ></span>
+                            {doc.status || "Draft"}
+                          </span>
+                        </td>
+                        <td className="py-5 px-6 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {doc.status !== "Approved" && (
+                              <button
+                                onClick={() => handleApproveDocument(doc._id)}
+                                className="p-2 hover:bg-white rounded-lg text-green-600 hover:text-green-700 transition-colors"
+                                title="Approve"
+                              >
+                                <span className="material-symbols-outlined text-lg">
+                                  check_circle
+                                </span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleViewDocument(doc._id)}
+                              className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-primary transition-colors dark:text-slate-400"
+                              title="View"
+                            >
+                              <span className="material-symbols-outlined text-lg">
+                                visibility
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => handleDownloadDocument(doc)}
+                              className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-primary transition-colors dark:text-slate-400"
+                              title="Download"
+                            >
+                              <span className="material-symbols-outlined text-lg">
+                                download
+                              </span>
+                            </button>
+                            <button
+                              onClick={() =>
+                                navigate(`/edit-document/${doc._id}`)
+                              }
+                              className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-primary transition-colors dark:text-slate-400"
+                              title="Edit"
+                            >
+                              <span className="material-symbols-outlined text-lg">
+                                edit
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => confirmDeleteDocument(doc._id)}
+                              className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-error transition-colors dark:text-slate-400"
+                              title="Delete"
+                            >
+                              <span className="material-symbols-outlined text-lg">
+                                delete
+                              </span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              <div className="flex items-center justify-between px-8 py-5 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-sm text-on-surface-variant dark:text-slate-400">
+                  Showing <span className="font-bold text-on-surface dark:text-white">1</span>{" "}
+                  to{" "}
+                  <span className="font-bold text-on-surface dark:text-white">
+                    {filteredDocuments.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-bold text-on-surface dark:text-white">
+                    {filteredDocuments.length}
+                  </span>{" "}
+                  results
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors disabled:opacity-30"
+                    disabled
+                  >
+                    <span className="material-symbols-outlined">
+                      chevron_left
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">
+                      1
+                    </button>
+                  </div>
+                  <button
+                    className="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors"
+                    disabled
+                  >
+                    <span className="material-symbols-outlined">
+                      chevron_right
+                    </span>
+                  </button>
                 </div>
-            )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-100 flex flex-col justify-between dark:bg-[#1e2532] dark:border-slate-800">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-6">
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontVariationSettings: '"FILL" 1' }}
+                  >
+                    cloud_upload
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold mb-1 font-headline">
+                    Storage Usage
+                  </h3>
+                  <div className="w-full bg-slate-100 h-2 rounded-full mb-3 overflow-hidden">
+                    <div className="bg-primary h-full w-[65%] rounded-full"></div>
+                  </div>
+                  <p className="text-sm text-on-surface-variant dark:text-slate-400">
+                    6.2 GB of 10 GB used (65%)
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-100 dark:bg-[#1e2532] dark:border-slate-800">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center">
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontVariationSettings: '"FILL" 1' }}
+                    >
+                      star
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-secondary px-2 py-1 bg-secondary/10 rounded-full">
+                    Trending
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold mb-1 font-headline">
+                  Most Viewed
+                </h3>
+                <p className="text-sm text-on-surface-variant mb-4 dark:text-slate-400">
+                  Dökümanlarınız bu hafta toplam 142 kez görüntülendi.
+                </p>
+                <a
+                  className="text-secondary text-sm font-bold flex items-center gap-1 hover:underline"
+                  href="#"
+                >
+                  View details{" "}
+                  <span className="material-symbols-outlined text-xs">
+                    arrow_forward
+                  </span>
+                </a>
+              </div>
+              <div className="bg-slate-900 p-8 rounded-lg shadow-2xl relative overflow-hidden group dark:bg-[#1e2532]">
+                <div className="relative z-10">
+                  <h3 className="text-xl font-bold text-white mb-2 font-headline">
+                    Need more space?
+                  </h3>
+                  <p className="text-slate-400 text-sm mb-6">
+                    Upgrade to Enterprise for unlimited storage and advanced
+                    AI-powered document analysis.
+                  </p>
+                  <button className="bg-white text-slate-900 px-6 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition-transform dark:bg-[#1e2532] dark:text-white">
+                    Explore Plans
+                  </button>
+                </div>
+                <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/20 blur-3xl rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
-  )
+  );
 }

@@ -1,0 +1,30 @@
+# Folders to ignore
+node_modules/
+design/
+.idea/
+dist/
+build/
+.next/
+out/
+pdfs/
+uploads/
+
+# Files to ignore
+.env
+.env.*
+*.log
+*.tmp
+*.bak
+
+# Subfolder specific (just in case)
+backend/node_modules/
+backend/.env*
+backend/pdfs/
+backend/uploads/
+frontend/node_modules/
+frontend/dist/
+frontend/.env*
+
+# OS files
+.DS_Store
+Thumbs.db

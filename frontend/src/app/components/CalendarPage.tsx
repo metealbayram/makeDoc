@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { ModeToggle } from "@/app/components/mode-toggle"
 import api from "../services/api"
+import { Sidebar } from "./Sidebar"
+import { Navbar } from "./Navbar"
 
 interface Event {
   _id: string
@@ -12,9 +12,9 @@ interface Event {
 }
 
 export default function CalendarPage() {
-  const navigate = useNavigate()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [userName, setUserName] = useState("")
+  const [userJob, setUserJob] = useState("")
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
   
   const [events, setEvents] = useState<Event[]>([])
@@ -30,9 +30,17 @@ export default function CalendarPage() {
 
   useEffect(() => {
     const storedName = localStorage.getItem("userName")
+    const storedJob = localStorage.getItem("userJob")
     const storedImage = localStorage.getItem("userProfileImage")
     if (storedName) setUserName(storedName)
-    if (storedImage) setUserProfileImage(`http://localhost:5000${storedImage}`)
+    if (storedJob) setUserJob(storedJob)
+    if (storedImage) {
+      if (storedImage.startsWith("http")) {
+        setUserProfileImage(storedImage)
+      } else {
+        setUserProfileImage(`http://localhost:5000${storedImage}`)
+      }
+    }
     fetchEvents()
   }, [])
 
@@ -83,12 +91,6 @@ export default function CalendarPage() {
     }
 }
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("userName")
-    localStorage.removeItem("userProfileImage")
-    navigate("/login")
-  }
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate()
   const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay()
@@ -124,13 +126,7 @@ export default function CalendarPage() {
                 </span>
                 <div className="mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px]">
                     {dayEvents.map(event => (
-                        <div key={event._id} className={`group/event flex items-center justify-between text-xs px-1.5 py-1 rounded border-l-2 cursor-pointer hover:opacity-100 hover:shadow-sm transition-all
-                            ${event.type === 'meeting' ? 'bg-blue-100 text-blue-700 border-blue-500 dark:bg-blue-900/30 dark:text-blue-300' : 
-                              event.type === 'court' ? 'bg-orange-100 text-orange-700 border-orange-500 dark:bg-orange-900/30 dark:text-orange-300' :
-                              event.type === 'deadline' ? 'bg-red-100 text-red-700 border-red-500 dark:bg-red-900/30 dark:text-red-300' :
-                              event.type === 'document' ? 'bg-purple-100 text-purple-700 border-purple-500 dark:bg-purple-900/30 dark:text-purple-300' :
-                              'bg-slate-100 text-slate-700 border-slate-500 dark:bg-slate-800 dark:text-slate-300'}
-                        `} title={event.title}>
+                        <div key={event._id} className={`group/event flex items-center justify-between text-xs px-1.5 py-1 rounded border-l-2 cursor-pointer hover:opacity-100 hover:shadow-sm transition-all ${event.type === 'meeting' ? 'bg-blue-100 text-blue-700 border-blue-500 dark:bg-blue-900/30 dark:text-blue-300' : event.type === 'court' ? 'bg-orange-100 text-orange-700 border-orange-500 dark:bg-orange-900/30 dark:text-orange-300' : event.type === 'deadline' ? 'bg-red-100 text-red-700 border-red-500 dark:bg-red-900/30 dark:text-red-300' : event.type === 'document' ? 'bg-purple-100 text-purple-700 border-purple-500 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-slate-100 text-slate-700 border-slate-500 dark:bg-slate-800 dark:text-slate-300'} `} title={event.title}>
                             <div className="flex-1 truncate">
                                 <span className="font-semibold opacity-75 mr-1">{new Date(event.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                 {event.title}
@@ -170,44 +166,11 @@ export default function CalendarPage() {
   const goToToday = () => setCurrentDate(new Date())
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased min-h-screen flex flex-col">
-       {/* Top Navigation (Consistent with Dashboard) */}
-       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6 py-3 shadow-sm">
-        <div className="flex items-center gap-8">
-            <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded bg-login-primary text-white">
-                    <span className="material-symbols-outlined text-[20px]">description</span>
-                </div>
-                <h2 className="text-xl font-bold tracking-tight text-text-main-light dark:text-white">MakeDoc</h2>
-            </div>
-        </div>
-        <div className="flex items-center gap-6">
-            <nav className="hidden lg:flex items-center gap-6">
-                <a className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="/dashboard">Dashboard</a>
-                <a className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="/documents">Documents</a>
-                <a className="text-sm font-semibold text-primary" href="/calendar">Calendar</a>
-            </nav>
-            <div className="flex items-center gap-3">
-                 <ModeToggle />
-                 <div className="relative group">
-                    <div className="h-10 w-10 overflow-hidden rounded-full border border-border-light dark:border-border-dark bg-gray-100 dark:bg-gray-800 relative cursor-pointer">
-                        {userProfileImage ? (
-                            <img alt={userName} className="h-full w-full object-cover" src={userProfileImage}/>
-                        ) : (
-                             <div className="h-full w-full flex items-center justify-center text-primary font-bold">
-                                {userName.charAt(0).toUpperCase()}
-                             </div>
-                        )}
-                    </div>
-                </div>
-                 <button onClick={handleLogout} className="flex size-10 items-center justify-center rounded-full hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark transition-colors" title="Logout">
-                    <span className="material-symbols-outlined">logout</span>
-                 </button>
-            </div>
-        </div>
-      </header>
-      
-      <main className="flex-1 p-6 md:p-10 max-w-[1400px] mx-auto w-full">
+    <div className="bg-surface text-on-surface antialiased min-h-screen dark:bg-[#111621] dark:text-white">
+      <Navbar userName={userName} userProfileImage={userProfileImage} />
+      <Sidebar userName={userName} userJob={userJob} userProfileImage={userProfileImage} />
+
+      <main className="ml-72 pt-28 px-12 pb-12 min-h-screen">
          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Calendar</h1>

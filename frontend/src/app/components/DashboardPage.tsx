@@ -1,520 +1,675 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import api from "../services/api"
+import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
 
-import { ModeToggle } from "./mode-toggle"
+import { Sidebar } from "./Sidebar";
+import { Navbar } from "./Navbar";
 
 interface Document {
-  _id: string
-  title: string
-  createdAt: string
-  status?: string // Backend might not send this yet, optional
+  _id: string;
+  title: string;
+  createdAt: string;
+  status?: string;
 }
 
 interface Event {
-    _id: string
-    title: string
-    date: string
-    type: 'meeting' | 'court' | 'deadline' | 'internal' | 'document'
-    description?: string
-  }
-  
-  export default function DashboardPage() {
-    const navigate = useNavigate()
-    const [documents, setDocuments] = useState<Document[]>([])
-    const [agendaEvents, setAgendaEvents] = useState<Event[]>([])
-    const [loading, setLoading] = useState(true)
-  
-    const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
-    const [userName, setUserName] = useState("")
-    const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null)
-    const [searchTerm, setSearchTerm] = useState("")
-  
-    useEffect(() => {
-      const storedName = localStorage.getItem("userName")
-      const storedImage = localStorage.getItem("userProfileImage")
-      if (storedName) setUserName(storedName)
-      if (storedImage) setUserProfileImage(`http://192.168.1.152:5000${storedImage}`)
-    }, [])
-  
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            setLoading(true)
-            try {
-                // Fetch Documents
-                const docUrl = searchTerm ? `/documents?search=${encodeURIComponent(searchTerm)}` : "/documents"
-                const docResponse = await api.get(docUrl)
-                setDocuments(docResponse.data.data || [])
+  _id: string;
+  title: string;
+  date: string;
+  type: "meeting" | "court" | "deadline" | "internal" | "document";
+  description?: string;
+}
 
-                // Fetch Agenda Events (Next 7 Days)
-                const startOfDay = new Date()
-                startOfDay.setHours(0, 0, 0, 0)
-                
-                const endOfWeek = new Date()
-                endOfWeek.setDate(startOfDay.getDate() + 7)
-                endOfWeek.setHours(23, 59, 59, 999)
-                
-                const eventResponse = await api.get('/events', { 
-                    params: { 
-                        start: startOfDay.toISOString(), 
-                        end: endOfWeek.toISOString() 
-                    } 
-                })
-                setAgendaEvents(eventResponse.data.data || [])
+export default function DashboardPage() {
+  const navigate = useNavigate();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [agendaEvents, setAgendaEvents] = useState<Event[]>([]);
+  const [friends, setFriends] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-            } catch (error) {
-                console.error("Failed to fetch dashboard data:", error)
-                setDocuments([])
-                setAgendaEvents([])
-            } finally {
-                setLoading(false)
-            }
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userJob, setUserJob] = useState("");
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<
+    string | null
+  >(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Chat state
+  const [selectedFriendChat, setSelectedFriendChat] = useState<any | null>(
+    null,
+  );
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessageText, setChatMessageText] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const storedName = localStorage.getItem("userName");
+    const storedImage = localStorage.getItem("userProfileImage");
+    const storedJob = localStorage.getItem("userJob");
+    if (storedName) setUserName(storedName);
+    if (storedJob) setUserJob(storedJob);
+    if (storedImage) {
+      if (storedImage.startsWith("http")) {
+        setUserProfileImage(storedImage);
+      } else {
+        setUserProfileImage(`http://localhost:5000${storedImage}`);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    let interval: any;
+    const fetchMessagesForSelectedFriend = async () => {
+      if (!selectedFriendChat) return;
+      try {
+        const res = await api.get(`/messages/${selectedFriendChat._id}`);
+        setChatMessages(res.data.data || []);
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+      }
+    };
+
+    if (selectedFriendChat) {
+      fetchMessagesForSelectedFriend();
+      interval = setInterval(fetchMessagesForSelectedFriend, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [selectedFriendChat]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const docUrl = searchTerm
+          ? `/documents?search=${encodeURIComponent(searchTerm)}`
+          : "/documents";
+        const docResponse = await api.get(docUrl);
+        setDocuments(docResponse.data.data || []);
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date();
+        endOfWeek.setDate(startOfDay.getDate() + 7);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        const eventResponse = await api.get("/events", {
+          params: {
+            start: startOfDay.toISOString(),
+            end: endOfWeek.toISOString(),
+          },
+        });
+        setAgendaEvents(eventResponse.data.data || []);
+
+        const friendsResponse = await api.get("/friends");
+        setFriends(friendsResponse.data.data || []);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        setDocuments([]);
+        setAgendaEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchDashboardData();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+
+
+  const handleViewDocument = async (id: string) => {
+    try {
+      const response = await api.get(`/documents/${id}/download`, {
+        responseType: "blob",
+      });
+      const file = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, "_blank");
+    } catch (error) {
+      console.error("Error viewing document:", error);
+    }
+  };
+
+  const handleDownloadDocument = async (doc: Document) => {
+    try {
+      const response = await api.get(`/documents/${doc._id}/download`, {
+        responseType: "blob",
+      });
+      const file = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.download = `${doc.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(fileURL);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+    }
+  };
+
+  const confirmDeleteDocument = (id: string) => {
+    setDeleteConfirmationId(id);
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!deleteConfirmationId) return;
+    try {
+      await api.delete(`/documents/${deleteConfirmationId}`);
+      setDocuments(documents.filter((doc) => doc._id !== deleteConfirmationId));
+    } catch (error) {
+      console.error("Error deleting document:", error);
+    } finally {
+      setDeleteConfirmationId(null);
+    }
+  };
+
+  const handleApproveDocument = async (id: string) => {
+    try {
+      const response = await api.put(`/documents/${id}/status`, {
+        status: "Approved",
+      });
+      if (response.data.success) {
+        setDocuments(
+          documents.map((doc) =>
+            doc._id === id ? { ...doc, status: "Approved" } : doc,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Error approving document:", error);
+    }
+  };
+
+  const handleProfileImageUpdate = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        alert("File size must be less than 10MB");
+        return;
+      }
+      const formData = new FormData();
+      formData.append("profileImage", file);
+      try {
+        const response = await api.put("/users/profile/image", formData);
+        if (response.data.success) {
+          const newImagePath = response.data.data.profileImage;
+          localStorage.setItem("userProfileImage", newImagePath);
+          setUserProfileImage(`http://localhost:5000${newImagePath}`);
         }
-
-        const timer = setTimeout(() => {
-            fetchDashboardData()
-        }, 500)
-
-        return () => clearTimeout(timer)
-    }, [searchTerm])
-    
-    const handleLogout = () => {
-        localStorage.removeItem("token")
-        localStorage.removeItem("userName")
-        localStorage.removeItem("userProfileImage")
-        navigate("/login")
+      } catch (error) {
+        console.error("Failed to update profile image:", error);
+      }
     }
+  };
 
-    const handleViewDocument = async (id: string) => {
-        try {
-            const response = await api.get(`/documents/${id}/download`, {
-                responseType: 'blob'
-            });
-            
-            const file = new Blob([response.data], { type: 'application/pdf' });
-            const fileURL = URL.createObjectURL(file);
-            window.open(fileURL, '_blank');
-        } catch (error) {
-            console.error("Error viewing document:", error);
-            alert("Could not load document.");
-        }
+  const handleSendChatMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatMessageText.trim() || !selectedFriendChat) return;
+
+    try {
+      const res = await api.post("/messages", {
+        receiverId: selectedFriendChat._id,
+        content: chatMessageText,
+      });
+      setChatMessages((prev) => [...prev, res.data.data]);
+      setChatMessageText("");
+    } catch (error: any) {
+      console.error("Failed to send message", error);
     }
+  };
 
-    const handleDownloadDocument = async (doc: Document) => {
-        try {
-            const response = await api.get(`/documents/${doc._id}/download`, {
-                responseType: 'blob'
-            });
-            
-            const file = new Blob([response.data], { type: 'application/pdf' });
-            const fileURL = URL.createObjectURL(file);
-            const link = document.createElement('a');
-            link.href = fileURL;
-            link.download = `${doc.title}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(fileURL);
-        } catch (error) {
-            console.error("Error downloading document:", error);
-            alert("Could not download document.");
-        }
-    }
+  return (
+    <div className="bg-surface text-on-surface antialiased overflow-x-hidden min-h-screen dark:bg-[#111621] dark:text-white">
+      <Navbar 
+        userName={userName} 
+        userProfileImage={userProfileImage} 
+        onProfileImageUpdate={handleProfileImageUpdate} 
+      />
+      <Sidebar 
+        userName={userName} 
+        userJob={userJob} 
+        userProfileImage={userProfileImage}
+        onProfileImageUpdate={handleProfileImageUpdate}
+      />
+      
+      {/* Main Content */}
+      <main className="ml-72 pt-28 px-12 pb-12 min-h-screen">
+        {/* Welcome Section */}
+        <header className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-extrabold tracking-tight text-on-surface dark:text-white">
+              Welcome back, {userName}.
+            </h1>
+            <p className="text-on-surface-variant flex items-center gap-2 dark:text-slate-400">
+              <span className="material-symbols-outlined text-primary">
+                event
+              </span>
+              You have {agendaEvents.length} upcoming{" "}
+              {agendaEvents.length === 1 ? "event" : "events"} today.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="flex items-center gap-2 px-8 py-4 bg-primary text-on-primary rounded-xl font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+              <span className="material-symbols-outlined">add_box</span>
+              New Case
+            </button>
+            <button
+              onClick={() => navigate("/create-document")}
+              className="flex items-center gap-2 px-8 py-4 bg-surface-container-highest text-on-surface rounded-xl font-bold hover:bg-surface-container-high active:scale-95 transition-all dark:text-white"
+            >
+              <span className="material-symbols-outlined">description</span>
+              Create Doc
+            </button>
+          </div>
+        </header>
 
-    const confirmDeleteDocument = (id: string) => {
-        setDeleteConfirmationId(id)
-    }
+        {/* Search Bar */}
+        <div className="mb-8 max-w-xl">
+          <div className="relative group">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+            <input 
+              type="text" 
+              placeholder="Search documents..." 
+              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm dark:bg-[#1e2532] dark:border-[#2e3645]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
 
-    const handleDeleteDocument = async () => {
-        if (!deleteConfirmationId) return;
-
-        try {
-            await api.delete(`/documents/${deleteConfirmationId}`);
-            // Remove from local state
-            setDocuments(documents.filter(doc => doc._id !== deleteConfirmationId));
-        } catch (error) {
-            console.error("Error deleting document:", error);
-            alert("Failed to delete document");
-        } finally {
-            setDeleteConfirmationId(null);
-        }
-    }
-
-    const handleApproveDocument = async (id: string) => {
-        try {
-            const response = await api.put(`/documents/${id}/status`, { status: "Approved" });
-            if (response.data.success) {
-                setDocuments(documents.map(doc => 
-                    doc._id === id ? { ...doc, status: "Approved" } : doc
-                ));
-            }
-        } catch (error) {
-            console.error("Error approving document:", error);
-            alert("Failed to approve document");
-        }
-    }
-
-    const handleProfileImageUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-
-            if (file.size > 10 * 1024 * 1024) {
-                 alert("File size must be less than 10MB");
-                 return;
-            }
-
-            const formData = new FormData();
-            formData.append('profileImage', file);
-
-            try {
-                const response = await api.put("/users/profile/image", formData);
-                
-                if (response.data.success) {
-                    const newImagePath = response.data.data.profileImage;
-                    localStorage.setItem("userProfileImage", newImagePath);
-                    setUserProfileImage(`http://192.168.1.152:5000${newImagePath}`);
-                }
-            } catch (error) {
-                console.error("Failed to update profile image:", error);
-                alert("Failed to update profile image");
-            }
-        }
-    }
-
-    // (Helper for event colors)
-    const getEventColor = (type: string) => {
-        switch(type) {
-            case 'meeting': return 'bg-primary ring-primary/20 text-primary';
-            case 'court': return 'bg-orange-500 ring-orange-500/20 text-orange-500';
-            case 'deadline': return 'bg-red-500 ring-red-500/20 text-red-500';
-            case 'document': return 'bg-purple-500 ring-purple-500/20 text-purple-500';
-            default: return 'bg-green-500 ring-green-500/20 text-green-500';
-        }
-    }
-
-    // Calculate today's events count
-    const todayCount = agendaEvents.filter(e => new Date(e.date).toDateString() === new Date().toDateString()).length
-
-    return (
-        <div className="bg-background-light dark:bg-background-dark font-display text-text-main-light dark:text-text-main-dark antialiased selection:bg-primary/20 flex min-h-screen w-full flex-col">
-          
-          {/* Delete Confirmation Modal */}
-          {deleteConfirmationId && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity animate-in fade-in-0">
-              <div className="w-full max-w-md mx-4 bg-card-light dark:bg-card-dark rounded-xl shadow-lg border border-border-light dark:border-border-dark p-6 animate-in zoom-in-95">
-                 <h3 className="text-lg font-bold mb-2">Confirm Deletion</h3>
-                 <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-6">
-                    Are you sure you want to delete this document? This action cannot be undone.
-                 </p>
-                 <div className="flex justify-end gap-2">
-                     <button className="px-4 py-2 rounded-lg text-sm font-semibold border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors" onClick={() => setDeleteConfirmationId(null)}>Cancel</button>
-                     <button className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors" onClick={handleDeleteDocument}>Delete</button>
-                 </div>
+        {/* Bento Layout Grid */}
+        <div className="grid grid-cols-12 gap-8">
+          {/* Left Column */}
+          <div className="col-span-12 lg:col-span-8 space-y-8">
+            {/* Metrics */}
+            <div className="grid grid-cols-2 gap-8">
+              <div className="bg-white p-8 rounded-lg shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] group hover:translate-y-[-4px] transition-transform duration-300 dark:bg-[#1e2532]">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-4">
+                    <p className="text-on-surface-variant font-medium text-sm dark:text-slate-400">
+                      Total Documents
+                    </p>
+                    <h3 className="text-5xl font-black text-on-surface dark:text-white">
+                      {documents.length}
+                    </h3>
+                  </div>
+                  <div className="w-14 h-14 bg-primary-container/20 rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                    <span className="material-symbols-outlined text-3xl">
+                      folder_open
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white p-8 rounded-lg shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] group hover:translate-y-[-4px] transition-transform duration-300 dark:bg-[#1e2532]">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-4">
+                    <p className="text-on-surface-variant font-medium text-sm dark:text-slate-400">
+                      Pending Tasks
+                    </p>
+                    <h3 className="text-5xl font-black text-on-surface dark:text-white">
+                      {agendaEvents.length}
+                    </h3>
+                  </div>
+                  <div className="w-14 h-14 bg-secondary-container/30 rounded-2xl flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-white transition-colors duration-300">
+                    <span className="material-symbols-outlined text-3xl">
+                      assignment_late
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-    
-          {/* Top Navigation */}
-          <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6 py-3 shadow-sm">
-            <div className="flex items-center gap-8">
-                <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded bg-login-primary text-white">
-                        <span className="material-symbols-outlined text-[20px]">description</span>
-                    </div>
-                    <h2 className="text-xl font-bold tracking-tight text-text-main-light dark:text-white">MakeDoc</h2>
-                </div>
-                {/* Search Bar */}
-                <div className="hidden md:flex relative w-64">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark material-symbols-outlined text-[20px]">search</span>
-                    <input 
-                        className="h-10 w-full rounded-lg border-none bg-background-light dark:bg-background-dark pl-10 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/50 placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark outline-none" 
-                        placeholder="Search docs..." 
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-            <div className="flex items-center gap-6">
-                <nav className="hidden lg:flex items-center gap-6">
-                    <a className="text-sm font-semibold text-primary" href="/dashboard">Dashboard</a>
-                    <a className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="/documents">Documents</a>
-                    <a className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors" href="/calendar">Calendar</a>
-                </nav>
-                <div className="flex items-center gap-3">
-                     <ModeToggle />
-                     
-                     <div className="relative group">
-                        <div className="h-10 w-10 overflow-hidden rounded-full border border-border-light dark:border-border-dark bg-gray-100 dark:bg-gray-800 relative cursor-pointer">
-                            <input 
-                                type="file" 
-                                className="absolute inset-0 opacity-0 z-20 cursor-pointer" 
-                                accept="image/*"
-                                onChange={handleProfileImageUpdate}
-                            />
-                            {userProfileImage ? (
-                                <img alt={userName} className="h-full w-full object-cover" src={userProfileImage}/>
-                            ) : (
-                                 <div className="h-full w-full flex items-center justify-center text-primary font-bold">
-                                    {userName.charAt(0).toUpperCase()}
-                                 </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                                <span className="material-symbols-outlined text-white text-[16px]">edit</span>
+
+            {/* Recent Documents Table */}
+            <section className="bg-white rounded-lg overflow-hidden shadow-[0_20px_40px_rgba(36,49,86,0.04)] dark:bg-[#1e2532]">
+              <div className="p-8 border-b border-surface-container-low flex justify-between items-center">
+                <h2 className="text-xl font-extrabold font-headline">
+                  Recent Documents
+                </h2>
+                <button
+                  className="text-primary font-bold text-sm hover:underline"
+                  onClick={() => navigate("/documents")}
+                >
+                  View All
+                </button>
+              </div>
+              <div className="w-full">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-[#111621]">
+                    <tr>
+                      <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-on-surface-variant dark:text-slate-400">
+                        Document Name
+                      </th>
+                      <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-on-surface-variant dark:text-slate-400">
+                        Date
+                      </th>
+                      <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-on-surface-variant dark:text-slate-400">
+                        Status
+                      </th>
+                      <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-on-surface-variant text-right dark:text-slate-400">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="py-20 text-center text-on-surface-variant font-medium italic dark:text-slate-400"
+                        >
+                          Loading workspace...
+                        </td>
+                      </tr>
+                    ) : documents.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-20 text-center">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center text-outline">
+                              <span className="material-symbols-outlined text-3xl">
+                                search_off
+                              </span>
                             </div>
-                        </div>
-                    </div>
-    
-                     <button onClick={handleLogout} className="flex size-10 items-center justify-center rounded-full hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark transition-colors" title="Logout">
-                        <span className="material-symbols-outlined">logout</span>
-                     </button>
-                </div>
-            </div>
-          </header>
-    
-          {/* Main Content */}
-          <main className="flex-1 px-6 py-8 md:px-10 lg:px-20 mx-auto w-full max-w-[1400px]">
-            {/* Page Heading */}
-            <div className="mb-8 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                <div>
-                    <h1 className="text-3xl font-black tracking-tight text-text-main-light dark:text-white mb-2">Dashboard</h1>
-                    <p className="text-text-secondary-light dark:text-text-secondary-dark">Welcome back, {userName}. You have <span className="font-bold text-primary">{todayCount} upcoming {todayCount === 1 ? 'event' : 'events'}</span> today.</p>
-                </div>
-                <div className="mt-4 md:mt-0 flex gap-3">
-                    <button className="flex items-center gap-2 rounded-lg bg-login-primary px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-primary-dark transition-colors">
-                        <span className="material-symbols-outlined text-[20px]">add</span>
-                        New Case
-                    </button>
-                    <button onClick={() => navigate("/create-document")} className="flex items-center gap-2 rounded-lg bg-white dark:bg-card-dark border border-border-light dark:border-border-dark px-4 py-2 text-sm font-bold text-text-main-light dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                        <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                        Create Doc
-                    </button>
-                </div>
-            </div>
-    
-            {/* Stats Grid */}
-            <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {/* Stat Card 1 */}
-                <div className="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 shadow-sm transition-all hover:shadow-md">
-                    <div className="flex items-start justify-between mb-4">
-                        <div className="flex size-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                            <span className="material-symbols-outlined">folder_open</span>
-                        </div>
-                                            </div>
-                    <p className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Total Documents</p>
-                    <p className="text-2xl font-bold text-text-main-light dark:text-white mt-1">{documents.length}</p>
-                </div>
-                {/* Stat Card 2 */}
-                
-                {/* Stat Card 3 */}
-                <div className="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 shadow-sm transition-all hover:shadow-md">
-                    <div className="flex items-start justify-between mb-4">
-                        <div className="flex size-10 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
-                            <span className="material-symbols-outlined">assignment_late</span>
-                        </div>
-                        
-                    </div>
-                    <p className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Pending Tasks</p>
-                    <p className="text-2xl font-bold text-text-main-light dark:text-white mt-1">{todayCount}</p>
-                </div>
-                {/* Stat Card 4 */}
-                
-            </div>
-    
-            {/* Content Split */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* Left Column (Wide) */}
-                <div className="xl:col-span-2 flex flex-col gap-8">
-                    {/* Recent Documents Table */}
-                    <div className="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
-                        <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-                            <h3 className="text-lg font-bold text-text-main-light dark:text-white">Recent Documents</h3>
-                            <a className="text-sm font-semibold text-primary hover:underline" href="/documents">View All</a>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-background-light dark:bg-background-dark/50 text-xs uppercase text-text-secondary-light dark:text-text-secondary-dark">
-                                    <tr>
-                                        <th className="px-6 py-3 font-semibold">Document Name</th>
-                                        <th className="px-6 py-3 font-semibold">Date</th>
-                                        <th className="px-6 py-3 font-semibold">Status</th>
-                                        <th className="px-6 py-3 font-semibold text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={4} className="p-8 text-center text-text-secondary-light dark:text-text-secondary-dark">
-                                                Loading...
-                                            </td>
-                                        </tr>
-                                    ) : documents.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="p-8 text-center text-text-secondary-light dark:text-text-secondary-dark">
-                                                No documents found.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        documents.map((doc) => (
-                                            <tr key={doc._id} className="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex size-8 shrink-0 items-center justify-center rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                                            <span className="material-symbols-outlined text-lg">description</span>
-                                                        </div>
-                                                        <span className="font-medium text-text-main-light dark:text-white">{doc.title}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                                                    {new Date(doc.createdAt).toLocaleDateString("tr-TR")}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                        doc.status === 'Approved' 
-                                                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' 
-                                                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400'
-                                                    }`}>
-                                                        {doc.status || "Draft"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {(!doc.status || doc.status === 'Draft') && (
-                                                            <button 
-                                                                onClick={() => handleApproveDocument(doc._id)} 
-                                                                className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" 
-                                                                title="Approve"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                                                            </button>
-                                                        )}
-                                                        <button onClick={() => handleViewDocument(doc._id)} className="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-white" title="View">
-                                                            <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                                        </button>
-                                                        <button onClick={() => handleDownloadDocument(doc)} className="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-white" title="Download">
-                                                            <span className="material-symbols-outlined text-[20px]">download</span>
-                                                        </button>
-                                                        <button onClick={() => confirmDeleteDocument(doc._id)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Delete">
-                                                            <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-    
-                    {/* Client Invoices (Static) */}
-                    <div className="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
-                        <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-                            <h3 className="text-lg font-bold text-text-main-light dark:text-white">Pending Invoices</h3>
-                            <button className="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-white">
-                                <span className="material-symbols-outlined">refresh</span>
-                            </button>
-                        </div>
-                        <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-                            <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-background-light dark:bg-background-dark">
-                                <span className="material-symbols-outlined text-3xl text-text-secondary-light dark:text-text-secondary-dark">inbox</span>
-                            </div>
-                            <h4 className="text-base font-semibold text-text-main-light dark:text-white">All caught up!</h4>
-                            <p className="mt-1 max-w-xs text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                                There are no pending invoices to review at this time.
+                            <p className="text-on-surface-variant font-medium italic dark:text-slate-400">
+                              No documents found.
                             </p>
-                            <button className="mt-6 text-sm font-bold text-primary hover:text-primary-dark">
-                                View Past Invoices
-                            </button>
-                        </div>
-                    </div>
-                </div>
-    
-                {/* Right Column (Narrow) */}
-                <div className="flex flex-col gap-8">
-                    {/* Agenda */}
-                    <div className="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
-                        <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-                            <h3 className="text-lg font-bold text-text-main-light dark:text-white">Agenda</h3>
-                            <span className="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark font-mono">
-                                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(new Date().setDate(new Date().getDate() + 7)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                        </div>
-                        <div className="p-4 max-h-[400px] overflow-y-auto custom-scrollbar">
-                            {(!agendaEvents || agendaEvents.length === 0) ? (
-                                <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark text-center py-4">No upcoming events this week.</p>
-                            ) : (
-                                agendaEvents.map((event, index) => {
-                                    const colorClass = getEventColor(event.type);
-                                    const isLast = index === agendaEvents.length - 1;
-                                    const eventDate = new Date(event.date);
-                                    
-                                    return (
-                                        <div key={event._id} className={`relative flex gap-4 ${!isLast ? 'pb-6' : ''}`}>
-                                            <div className="flex flex-col items-center">
-                                                <div className={`size-3 rounded-full ${colorClass.split(' ')[0]} ring-4 ${colorClass.split(' ')[1]}`}></div>
-                                                {!isLast && <div className="h-full w-0.5 bg-border-light dark:bg-border-dark mt-2"></div>}
-                                            </div>
-                                            <div className={`flex-1 ${!isLast ? 'pb-2' : ''}`}>
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <p className={`text-xs font-semibold ${colorClass.split(' ')[2]}`}>
-                                                        {eventDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                                    </p>
-                                                    <p className="text-[10px] font-medium text-text-secondary-light dark:text-text-secondary-dark bg-background-light dark:bg-background-dark px-2 py-0.5 rounded-full border border-border-light dark:border-border-dark">
-                                                        {eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                                    </p>
-                                                </div>
-                                                <div className="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                                    <p className="font-semibold text-sm text-text-main-light dark:text-white">{event.title}</p>
-                                                    {event.description && <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1 line-clamp-2">{event.description}</p>}
-                                                    <p className="text-[10px] uppercase font-bold text-text-secondary-light/70 dark:text-text-secondary-dark/70 mt-1">{event.type}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                })
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      documents.slice(0, 5).map((doc) => (
+                        <tr
+                          key={doc._id}
+                          className="border-b border-surface-container-low/50 hover:bg-slate-50 transition-colors group"
+                        >
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="material-symbols-outlined text-primary/60 group-hover:text-primary transition-colors">
+                                description
+                              </span>
+                              <span className="font-bold text-on-surface dark:text-white">
+                                {doc.title}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-4 text-sm font-medium text-on-surface-variant dark:text-slate-400">
+                            {new Date(doc.createdAt).toLocaleDateString(
+                              "tr-TR",
                             )}
-                        </div>
-                        <div className="border-t border-border-light dark:border-border-dark p-3">
-                            <button onClick={() => navigate('/calendar')} className="w-full rounded-lg py-2 text-sm font-semibold text-text-secondary-light hover:bg-background-light dark:text-text-secondary-dark dark:hover:bg-background-dark transition-colors">
-                                View Full Calendar
-                            </button>
-                        </div>
-                    </div>
-    
-                    {/* Recent Contacts (Static) */}
-                    <div className="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm">
-                        <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-                            <h3 className="text-lg font-bold text-text-main-light dark:text-white">Recent Contacts</h3>
-                        </div>
-                        <div className="p-4 flex flex-col gap-3">
-                            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer transition-colors">
-                                <div className="h-10 w-10 rounded-full bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBW3ekANB9cCAjEPq8VVWrS0oZkhXCXMJiHR7yz77dTYwyXiRzatlNKLqFY-CLoDz8O0leQJGpvcVbPyxHw9Ds8N5kI5Wl0pwm5HtEhZEONhkjjujDi5tg0SD8WdD7UXyREj4YTOLETLK6SuWKYjTkzetT877Z1dM5kb_Te6xoZqnZ84MUt5AgKASurUik4uGpQLbXqzq0r8sbfbXW0z6N_wEEW12EwGQp81EUCMhRGRy4pN-bKiaQcSphFLIxf0boQ8SVZCuSAxo0')" }}></div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-text-main-light dark:text-white truncate">Sarah Jenkins</p>
-                                    <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate">Client - Estate Case</p>
-                                </div>
-                                <button className="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark">
-                                    <span className="material-symbols-outlined text-lg">mail</span>
+                          </td>
+                          <td className="px-8 py-4">
+                            <span
+                              className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${doc.status === "Approved" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}
+                            >
+                              {doc.status || "Draft"}
+                            </span>
+                          </td>
+                          <td className="px-8 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleViewDocument(doc._id)}
+                                className="p-2 hover:bg-primary/10 rounded-full text-primary transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  visibility
+                                </span>
+                              </button>
+                              {doc.status !== "Approved" && (
+                                <button
+                                  onClick={() => handleApproveDocument(doc._id)}
+                                  className="p-2 hover:bg-green-100 rounded-full text-green-600 transition-colors"
+                                  title="Approve Document"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    check_circle
+                                  </span>
                                 </button>
+                              )}
+                              <button
+                                onClick={() => handleDownloadDocument(doc)}
+                                className="p-2 hover:bg-primary/10 rounded-full text-primary transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  download
+                                </span>
+                              </button>
+                              <button
+                                onClick={() => confirmDeleteDocument(doc._id)}
+                                className="p-2 hover:bg-red-100 rounded-full text-red-600 transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  delete
+                                </span>
+                              </button>
                             </div>
-                            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark cursor-pointer transition-colors">
-                                <div className="h-10 w-10 rounded-full bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuA-Ky6Lzs3xHZQICWf8kbHDupmFWTKQbybDReExYSKpjZEz9TuBWzgJOZTVB_EUYfpY-mX21r7tUHzwWyUXCGAcPdkDjdYhisIG33Oizg8P-4YwogBbW-j9EcZCU3XIJ5HU5gLge1hk_5F3l8f69GA78k_3j21f4gvVA9qpxrmde1mGyIZTmYVPdBmukOqsGKPzcMaIpftH-kO2tif-S79LbhyAB0xBgYIgcHIFTuxHvzlW6UbXtT3eElRDo7iyT8rgsMcpYV0vkco')" }}></div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-text-main-light dark:text-white truncate">Michael Ross</p>
-                                    <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate">Associate Partner</p>
-                                </div>
-                                <button className="text-text-secondary-light hover:text-primary dark:text-text-secondary-dark">
-                                    <span className="material-symbols-outlined text-lg">mail</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-    
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-12 lg:col-span-4 space-y-8">
+            {/* Agenda Widget */}
+            <section className="bg-white p-8 rounded-lg shadow-[0_20px_40px_rgba(36,49,86,0.04)] border border-slate-100 dark:bg-[#1e2532] dark:border-slate-800">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-extrabold font-headline">Agenda</h2>
+                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-on-surface dark:bg-[#111621] dark:text-white">
+                  <span className="material-symbols-outlined">
+                    calendar_today
+                  </span>
                 </div>
+              </div>
+              <div className="py-4 flex flex-col gap-4 overflow-y-auto max-h-[300px] custom-scrollbar">
+                {agendaEvents.length === 0 ? (
+                  <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">
+                      <span className="material-symbols-outlined text-4xl text-primary/40">
+                        event_busy
+                      </span>
+                    </div>
+                    <p className="text-on-surface-variant font-medium dark:text-slate-400">
+                      No upcoming events this week
+                    </p>
+                  </div>
+                ) : (
+                  agendaEvents.map((event) => (
+                    <div
+                      key={event._id}
+                      className="flex gap-4 p-4 rounded-xl bg-slate-50/50 border border-transparent hover:border-slate-200 transition-all"
+                    >
+                      <div className="text-center min-w-[50px]">
+                        <p className="text-[10px] font-black uppercase text-primary">
+                          {new Date(event.date).toLocaleDateString("en-US", {
+                            weekday: "short",
+                          })}
+                        </p>
+                        <p className="text-lg font-black">
+                          {new Date(event.date).getDate()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">{event.title}</p>
+                        <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider dark:text-slate-400">
+                          {new Date(event.date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <a
+                className="w-full mt-4 inline-flex items-center justify-center gap-2 text-primary font-bold text-sm hover:gap-3 transition-all"
+                href="/calendar"
+              >
+                View Full Calendar{" "}
+                <span className="material-symbols-outlined text-sm">
+                  arrow_forward
+                </span>
+              </a>
+            </section>
+
+            {/* Team/Friends Widget */}
+            <section className="bg-white p-8 rounded-lg shadow-[0_20px_40px_rgba(36,49,86,0.04)] dark:bg-[#1e2532]">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-extrabold font-headline">Team</h2>
+                <button
+                  className="text-primary font-bold text-sm hover:underline"
+                  onClick={() => navigate("/friends")}
+                >
+                  View All
+                </button>
+              </div>
+              <ul className="space-y-6">
+                {friends.slice(0, 3).map((friend) => (
+                  <li
+                    key={friend._id}
+                    className="flex items-center justify-between group cursor-pointer"
+                    onClick={() => setSelectedFriendChat(friend)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center font-bold text-primary">
+                          {friend.profileImage ? (
+                            <img
+                              src={`http://localhost:5000${friend.profileImage}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            friend.name.charAt(0)
+                          )}
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                      </div>
+                      <div>
+                        <p className="font-bold text-on-surface group-hover:text-primary transition-colors dark:text-white">
+                          {friend.name}
+                        </p>
+                        <p className="text-xs text-on-surface-variant font-medium dark:text-slate-400">
+                          {friend.job || "Legal Advisor"}
+                        </p>
+                      </div>
+                    </div>
+                    <button className="p-2 text-on-surface-variant hover:text-primary transition-colors dark:text-slate-400">
+                      <span className="material-symbols-outlined">
+                        chat_bubble
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {/* Status Card */}
+            <div className="bg-slate-900 p-8 rounded-lg text-white shadow-2xl relative overflow-hidden group dark:bg-[#1e2532]">
+              <div className="relative z-10">
+                <h4 className="text-xl font-black mb-2 font-headline">
+                  Cloud Workspace
+                </h4>
+                <p className="text-slate-400 text-sm mb-6">
+                  Securing all legal documents with 256-bit encryption.
+                </p>
+                <div className="h-1.5 w-full bg-white/10 rounded-full mb-6">
+                  <div className="h-full w-[45%] bg-primary rounded-full shadow-[0_0_10px_#0053dc]"></div>
+                </div>
+                <button className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-opacity-90 transition-all dark:bg-[#1e2532] dark:text-white">
+                  Manage License
+                </button>
+              </div>
+              <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700"></div>
             </div>
-    
-          </main>
+          </div>
         </div>
-      )
+
+        {/* Delete Modal */}
+        {deleteConfirmationId && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="w-full max-w-sm bg-white rounded-2xl p-8 shadow-2xl animate-in zoom-in-95 dark:bg-[#1e2532]">
+              <h3 className="text-xl font-black mb-2 font-headline">
+                Delete Doc?
+              </h3>
+              <p className="text-sm text-on-surface-variant mb-8 dark:text-slate-400">
+                This action is permanent and cannot be reversed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 py-3 font-bold border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors dark:border-[#2e3645]"
+                  onClick={() => setDeleteConfirmationId(null)}
+                >
+                  Keep it
+                </button>
+                <button
+                  className="flex-1 py-3 font-bold bg-red-600 text-white rounded-xl shadow-lg shadow-red-600/20 hover:opacity-90 transition-all"
+                  onClick={handleDeleteDocument}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Chat Overlay */}
+        {selectedFriendChat && (
+          <div className="fixed bottom-8 right-8 w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 dark:bg-[#1e2532] dark:border-[#2e3645]">
+              <div className="p-4 bg-slate-900 text-white flex justify-between items-center dark:bg-[#1e2532]">
+                  <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-xs">
+                          {selectedFriendChat.name.charAt(0)}
+                      </div>
+                      <span className="font-bold text-sm">{selectedFriendChat.name}</span>
+                  </div>
+                  <button onClick={() => setSelectedFriendChat(null)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                      <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+              </div>
+              <div className="h-80 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-[#111621]">
+                  {chatMessages.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.sender === selectedFriendChat._id ? 'justify-start' : 'justify-end'}`}>
+                          <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === selectedFriendChat._id ? 'bg-white text-slate-900 rounded-tl-none shadow-sm' : 'bg-primary text-white rounded-tr-none shadow-md'} dark:text-white`}>
+                              {msg.content}
+                          </div>
+                      </div>
+                  ))}
+                  <div ref={chatEndRef} />
+              </div>
+              <form onSubmit={handleSendChatMessage} className="p-4 bg-white border-t border-slate-100 flex gap-2 dark:bg-[#1e2532] dark:border-slate-800">
+                  <input 
+                      type="text" 
+                      placeholder="Type a message..." 
+                      className="flex-1 text-sm bg-slate-50 border-none rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary/20 dark:bg-[#111621]"
+                      value={chatMessageText}
+                      onChange={(e) => setChatMessageText(e.target.value)}
+                  />
+                  <button type="submit" className="p-2 bg-primary text-white rounded-xl hover:opacity-90 transition-all">
+                      <span className="material-symbols-outlined text-sm">send</span>
+                  </button>
+              </form>
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
