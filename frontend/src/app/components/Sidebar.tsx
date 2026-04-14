@@ -20,11 +20,13 @@ export function Sidebar({
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: "grid_view" },
     { name: "Documents", href: "/documents", icon: "layers" },
+    { name: "Verify File", href: "/verify-document", icon: "verified" },
     { name: "Clients", href: "/clients", icon: "assignment_ind" },
     { name: "Calendar", href: "/calendar", icon: "calendar_month" },
     { name: "Friends", href: "/friends", icon: "group" },
     { name: "Groups", href: "/groups", icon: "hub" },
     { name: "Messages", href: "/messages", icon: "chat" },
+    { name: "Tools", href: "/tools", icon: "construction" },
   ];
 
   const isActive = (href: string) => location.pathname === href;
@@ -75,7 +77,7 @@ export function Sidebar({
           <a
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-body text-sm font-medium ${ isActive(item.href) ? "bg-white text-blue-600 shadow-sm translate-x-1 border-r-4 border-blue-600" : "text-slate-500 hover:bg-slate-200/50" }`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-body text-sm font-medium ${ isActive(item.href) ? "bg-white text-blue-600 shadow-sm translate-x-1 border-r-4 border-blue-600 dark:bg-[#1e2532] dark:text-blue-400 dark:border-blue-400" : "text-slate-500 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50" }`}
           >
             <span
               className="material-symbols-outlined"

@@ -121,9 +121,7 @@ export default function CreateDocumentPage() {
                      .replace(/{{KIRACI_ADI_SOYADI}}/g, client.name)
                      .replace(/{{KIRACI_TC}}/g, client.tcNo)
                      .replace(/{{KIRACI_ADRES}}/g, client.address)
-                     .replace(/{{KIRAYA_VEREN_ADI_SOYADI}}/g, client.name)
-                     .replace(/{{KIRAYA_VEREN_TC}}/g, client.tcNo)
-                     .replace(/{{KIRAYA_VEREN_ADRES}}/g, client.address);
+
 
           editorRef.current.innerHTML = html;
           setContent(html);
@@ -536,12 +534,12 @@ export default function CreateDocumentPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_32px_64px_rgba(0,0,0,0.04)] overflow-hidden border border-slate-100 dark:border-slate-800">
-            <div className="flex flex-wrap items-center gap-1 p-3 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/50 shadow-inner">
+          <div className="bg-white rounded-2xl shadow-[0_32px_64px_rgba(0,0,0,0.04)] overflow-hidden border border-slate-200">
+            <div className="flex flex-wrap items-center gap-1 p-3 border-b border-slate-200 bg-slate-50 shadow-inner">
               <div className="relative group/template">
                  <select 
                     onChange={(e) => insertTemplate(e.target.value)}
-                    className="appearance-none outline-none h-9 flex items-center gap-2 pl-3 pr-8 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-md transition-colors text-sm font-semibold text-primary dark:text-blue-400 bg-transparent cursor-pointer">
+                    className="appearance-none outline-none h-9 flex items-center gap-2 pl-3 pr-8 hover:bg-slate-200 rounded-md transition-colors text-sm font-semibold text-primary bg-transparent cursor-pointer">
                     <option value="" disabled selected>Insert Template...</option>
                     <option value="rental_agreement">Konut Kira Sözleşmesi (Şablon)</option>
                     <option value="official_mandate">Görevlendirme Onayı (Resmî)</option>
@@ -549,24 +547,24 @@ export default function CreateDocumentPage() {
                  </select>
                  <span className="absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[16px] text-primary pointer-events-none">auto_awesome</span>
               </div>
-              <div className="h-6 w-[1px] bg-slate-300 dark:bg-slate-700 mx-2"></div>
-              <button onClick={() => execCmd('bold')} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-500 dark:text-slate-400" title="Bold">
+              <div className="h-6 w-[1px] bg-slate-300 mx-2"></div>
+              <button onClick={() => execCmd('bold')} className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500" title="Bold">
                 <span className="material-symbols-outlined text-[20px]">format_bold</span>
               </button>
-              <button onClick={() => execCmd('italic')} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-500 dark:text-slate-400" title="Italic">
+              <button onClick={() => execCmd('italic')} className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500" title="Italic">
                 <span className="material-symbols-outlined text-[20px]">format_italic</span>
               </button>
               <div className="flex-1"></div>
               <input type="file" ref={signatureInputRef} className="hidden" accept="image/png, image/jpeg" onChange={handleSignatureUpload} />
-              <button onClick={() => signatureInputRef.current?.click()} className="flex items-center gap-2 px-3 py-1.5 hover:bg-secondary/10 text-secondary dark:text-purple-400 rounded-md transition-colors text-sm font-semibold">
+              <button onClick={() => signatureInputRef.current?.click()} className="flex items-center gap-2 px-3 py-1.5 hover:bg-secondary/10 text-secondary rounded-md transition-colors text-sm font-semibold">
                 <span className="material-symbols-outlined text-[16px]">ink_pen</span>
                 <span>Insert Signature</span>
               </button>
             </div>
             
-            <div className="bg-slate-100 dark:bg-[#0f1218] p-8 md:p-12 overflow-y-auto flex flex-col items-center">
+            <div className="bg-slate-100 p-8 md:p-12 overflow-y-auto flex flex-col items-center">
                 <div 
-                    className="w-[210mm] min-h-[297mm] bg-white text-black shadow-xl p-[2.5cm] outline-none leading-relaxed text-[11pt] relative dark:bg-[#1e2532]" 
+                    className="w-[210mm] min-h-[297mm] bg-white text-black shadow-xl p-[2.5cm] outline-none leading-relaxed text-[11pt] relative" 
                     contentEditable
                     ref={editorRef}
                     style={{ fontFamily: 'Arial, sans-serif' }}

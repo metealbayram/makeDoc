@@ -20,6 +20,53 @@ interface Event {
   description?: string;
 }
 
+const DASHBOARD_AGENDA_TYPES: Array<Event["type"]> = [
+  "meeting",
+  "court",
+  "deadline",
+  "internal",
+];
+
+const getAgendaEventTheme = (type: Event["type"]) => {
+  switch (type) {
+    case "meeting":
+      return {
+        icon: "groups",
+        iconWrapper:
+          "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+        dayText: "text-blue-600 dark:text-blue-300",
+      };
+    case "court":
+      return {
+        icon: "balance",
+        iconWrapper:
+          "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+        dayText: "text-amber-600 dark:text-amber-300",
+      };
+    case "deadline":
+      return {
+        icon: "alarm",
+        iconWrapper:
+          "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+        dayText: "text-red-600 dark:text-red-300",
+      };
+    case "document":
+      return {
+        icon: "description",
+        iconWrapper:
+          "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+        dayText: "text-violet-600 dark:text-violet-300",
+      };
+    default:
+      return {
+        icon: "event_note",
+        iconWrapper:
+          "bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-200",
+        dayText: "text-slate-600 dark:text-slate-300",
+      };
+  }
+};
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -107,7 +154,10 @@ export default function DashboardPage() {
             end: endOfWeek.toISOString(),
           },
         });
-        setAgendaEvents(eventResponse.data.data || []);
+        const upcomingAgendaEvents = (eventResponse.data.data || []).filter(
+          (event: Event) => DASHBOARD_AGENDA_TYPES.includes(event.type),
+        );
+        setAgendaEvents(upcomingAgendaEvents);
 
         const friendsResponse = await api.get("/friends");
         setFriends(friendsResponse.data.data || []);
@@ -271,7 +321,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => navigate("/create-document")}
-              className="flex items-center gap-2 px-8 py-4 bg-surface-container-highest text-on-surface rounded-xl font-bold hover:bg-surface-container-high active:scale-95 transition-all dark:text-white"
+              className="flex items-center gap-2 px-8 py-4 rounded-xl font-bold border border-slate-200 bg-slate-50 text-on-surface hover:bg-white active:scale-95 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
             >
               <span className="material-symbols-outlined">description</span>
               Create Doc
@@ -309,7 +359,7 @@ export default function DashboardPage() {
                       {documents.length}
                     </h3>
                   </div>
-                  <div className="w-14 h-14 bg-primary-container/20 rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white dark:bg-primary/15 dark:text-blue-300 dark:group-hover:bg-primary dark:group-hover:text-white">
                     <span className="material-symbols-outlined text-3xl">
                       folder_open
                     </span>
@@ -326,7 +376,7 @@ export default function DashboardPage() {
                       {agendaEvents.length}
                     </h3>
                   </div>
-                  <div className="w-14 h-14 bg-secondary-container/30 rounded-2xl flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-white transition-colors duration-300">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-secondary/10 text-secondary transition-colors duration-300 group-hover:bg-secondary group-hover:text-white dark:bg-violet-500/15 dark:text-violet-300 dark:group-hover:bg-violet-500 dark:group-hover:text-white">
                     <span className="material-symbols-outlined text-3xl">
                       assignment_late
                     </span>
@@ -482,8 +532,8 @@ export default function DashboardPage() {
               <div className="py-4 flex flex-col gap-4 overflow-y-auto max-h-[300px] custom-scrollbar">
                 {agendaEvents.length === 0 ? (
                   <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">
-                      <span className="material-symbols-outlined text-4xl text-primary/40">
+                    <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center dark:bg-primary/10">
+                      <span className="material-symbols-outlined text-4xl text-primary/40 dark:text-primary/70">
                         event_busy
                       </span>
                     </div>
@@ -492,23 +542,35 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 ) : (
-                  agendaEvents.map((event) => (
+                  agendaEvents.map((event) => {
+                    const eventTheme = getAgendaEventTheme(event.type);
+
+                    return (
                     <div
                       key={event._id}
-                      className="flex gap-4 p-4 rounded-xl bg-slate-50/50 border border-transparent hover:border-slate-200 transition-all"
+                      className="flex items-center gap-4 p-4 rounded-xl bg-slate-50/80 border border-slate-100 hover:border-slate-200 hover:bg-white transition-all dark:bg-slate-900/60 dark:border-slate-800 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                     >
-                      <div className="text-center min-w-[50px]">
-                        <p className="text-[10px] font-black uppercase text-primary">
+                      <div className="text-center min-w-[56px] rounded-xl bg-white border border-slate-100 px-2 py-2 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                        <p className={`text-[10px] font-black uppercase ${eventTheme.dayText}`}>
                           {new Date(event.date).toLocaleDateString("en-US", {
                             weekday: "short",
                           })}
                         </p>
-                        <p className="text-lg font-black">
+                        <p className="text-lg font-black text-on-surface dark:text-white">
                           {new Date(event.date).getDate()}
                         </p>
                       </div>
-                      <div>
-                        <p className="font-bold text-sm">{event.title}</p>
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${eventTheme.iconWrapper}`}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          {eventTheme.icon}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-on-surface dark:text-white truncate">
+                          {event.title}
+                        </p>
                         <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider dark:text-slate-400">
                           {new Date(event.date).toLocaleTimeString([], {
                             hour: "2-digit",
@@ -517,7 +579,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                  ))
+                    )})
                 )}
               </div>
               <a

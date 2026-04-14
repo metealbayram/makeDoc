@@ -1,9 +1,11 @@
 
 import { Router } from 'express';
+import multer from 'multer';
 import authorize from '../middlewares/auth.middleware.js';
-import { createDocument, getDocuments, downloadDocument, deleteDocument, updateDocumentStatus, getDocumentById, updateDocument } from '../controller/documents.controller.js';
+import { createDocument, getDocuments, downloadDocument, deleteDocument, updateDocumentStatus, getDocumentById, updateDocument, verifyDocument } from '../controller/documents.controller.js';
 
 const documentRouter = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 
 
@@ -14,5 +16,6 @@ documentRouter.delete('/:id', authorize, deleteDocument);
 documentRouter.put('/:id/status', authorize, updateDocumentStatus);
 documentRouter.get('/:id', authorize, getDocumentById);
 documentRouter.put('/:id', authorize, updateDocument);
+documentRouter.post('/verify', authorize, upload.single('pdf'), verifyDocument);
 
 export default documentRouter;

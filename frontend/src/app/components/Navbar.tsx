@@ -24,7 +24,7 @@ export function Navbar({ userName, userProfileImage, onProfileImageUpdate }: Nav
   }
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl flex justify-between items-center h-20 px-12 shadow-[0_4px_30px_rgba(36,49,86,0.06)] border-b border-slate-200/50 dark:border-[#2e3645]/50">
+    <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#111621]/80 backdrop-blur-xl flex justify-between items-center h-20 px-12 shadow-[0_4px_30px_rgba(36,49,86,0.06)] border-b border-slate-200/50 dark:border-[#2e3645]/50">
       <div className="flex items-center gap-12">
         <span
           className="text-2xl font-black text-slate-900 tracking-tighter cursor-pointer font-headline dark:text-white"
@@ -37,7 +37,7 @@ export function Navbar({ userName, userProfileImage, onProfileImageUpdate }: Nav
             <a
               key={link.href}
               href={link.href}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${ location.pathname === link.href ? "text-primary bg-primary/5" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/70" }`}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${ location.pathname === link.href ? "text-primary bg-primary/5 dark:bg-primary/20" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/70 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/70" }`}
             >
               {link.name}
             </a>
@@ -78,7 +78,7 @@ export function Navbar({ userName, userProfileImage, onProfileImageUpdate }: Nav
 
         <button
           onClick={handleLogout}
-          className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100/70"
+          className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/70"
           title="Logout"
         >
           <span className="material-symbols-outlined">logout</span>

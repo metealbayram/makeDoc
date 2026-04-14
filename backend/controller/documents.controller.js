@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import puppeteer from 'puppeteer'; // Used for high-fidelity PDF rendering
+import crypto from 'crypto';
 import Event from '../models/Event.js';
 import Document from '../models/Document.js';
-
 
 export const createDocument = async (req, res, next) => {
     try {
@@ -88,6 +88,7 @@ export const createDocument = async (req, res, next) => {
             });
 
             await browser.close();
+
 
         } catch (pdfError) {
             console.error("Puppeteer PDF Generation Error:", pdfError);
@@ -212,6 +213,46 @@ export const updateDocumentStatus = async (req, res, next) => {
 
         if (!document) {
             return res.status(404).json({ message: 'Document not found' });
+        }
+
+        if (status === 'Approved' && document.status !== 'Approved') {
+            if (document.path && fs.existsSync(document.path)) {
+                try {
+                    const pdfBuffer = fs.readFileSync(document.path);
+
+                    const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+                        modulusLength: 2048,
+                        publicKeyEncoding: { type: 'spki', format: 'pem' },
+                        privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+                    });
+
+                    const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+                    const sign = crypto.createSign('SHA256');
+                    sign.update(pdfBuffer);
+                    sign.end();
+                    const signature = sign.sign(privateKey, 'base64');
+                    const timestamp = new Date().toISOString();
+
+                    const embedData = {
+                        signature,
+                        publicKey,
+                        originalHash: hash,
+                        signerName: req.lawyer ? req.lawyer.name : document.name,
+                        timestamp
+                    };
+
+                    const MARKER = '\n---SIGNATURE_DATA---\n';
+                    const markerBuffer = Buffer.from(MARKER, 'utf-8');
+                    const payloadBuffer = Buffer.from(JSON.stringify(embedData), 'utf-8');
+                    const signedPdfBuffer = Buffer.concat([pdfBuffer, markerBuffer, payloadBuffer]);
+
+                    fs.writeFileSync(document.path, signedPdfBuffer);
+                } catch (signError) {
+                    console.error("Error signing document on approval:", signError);
+                    return res.status(500).json({ message: 'Failed to sign the document during approval.' });
+                }
+            }
         }
 
         document.status = status;
@@ -366,6 +407,103 @@ export const updateDocument = async (req, res, next) => {
 
     } catch (error) {
         next(error);
+    }
+};
+
+export const verifyDocument = async (req, res, next) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "PDF dosyası eksik." });
+
+        let currentBuffer = req.file.buffer;
+        const MARKER = '\n---SIGNATURE_DATA---\n';
+        const markerBuffer = Buffer.from(MARKER, 'utf-8');
+        
+        const signatures = [];
+        let isAllValid = true;
+        let hasSignatures = false;
+
+        while (true) {
+            const markerIndex = currentBuffer.lastIndexOf(markerBuffer);
+            if (markerIndex === -1) break; // Başka imza kalmadı
+            hasSignatures = true;
+
+            // Dosyayı ayır
+            const pdfPart = currentBuffer.slice(0, markerIndex);
+            const payloadPart = currentBuffer.slice(markerIndex + markerBuffer.length);
+
+            let embedData;
+            try {
+                embedData = JSON.parse(payloadPart.toString('utf-8'));
+            } catch (e) {
+                isAllValid = false;
+                break;
+            }
+
+            const { signature, publicKey, originalHash, signerName, timestamp } = embedData;
+
+            // Anlık Hash Hesapla
+            const currentHash = crypto.createHash('sha256').update(pdfPart).digest('hex');
+
+            // Doğrula
+            const verify = crypto.createVerify('SHA256');
+            verify.update(pdfPart);
+            verify.end();
+            
+            let isThisValid = false;
+            try {
+                isThisValid = verify.verify(publicKey, signature, 'base64');
+            } catch (err) {
+                isThisValid = false;
+            }
+
+            if (currentHash !== originalHash) {
+                isThisValid = false;
+            }
+
+            if (!isThisValid) {
+                isAllValid = false;
+                break;
+            }
+
+            signatures.push({
+                originalHash: currentHash,
+                embeddedHash: originalHash,
+                signerName,
+                timestamp,
+                signatureShort: signature.substring(0, 30) + '...'
+            });
+
+            // Bir önceki (iç içe) imzanın kontrolü için buffer'ı güncelle
+            currentBuffer = pdfPart;
+        }
+
+        if (!hasSignatures) {
+            return res.json({
+                valid: false,
+                error: "DİGİTAL İMZA BULUNAMADI: Dosyada gömülü imza verisi yok."
+            });
+        }
+
+        if (!isAllValid) {
+            return res.json({
+                valid: false,
+                error: "Geçersiz veya kurcalanmış imza tespit edildi."
+            });
+        }
+
+        // signatures dizisi en sondan en başa (en dıştan en içe) doğru doldu.
+        // Kronolojik sıra için tersine çeviriyoruz.
+        signatures.reverse();
+
+        res.status(200).json({
+            success: true,
+            valid: true,
+            signatures: signatures
+        });
+
+    } catch (error) {
+        console.error("Doğrulama hatası:", error);
+        res.status(500).json({ error: "Doğrulama işlemi sırasında sunucu hatası." });
     }
 };
 

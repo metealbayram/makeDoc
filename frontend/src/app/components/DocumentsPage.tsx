@@ -234,22 +234,22 @@ export default function DocumentsPage() {
           <div className="space-y-8 font-sans">
             {/* Filters & Search Bar Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center p-1 bg-slate-100 rounded-2xl w-fit">
+              <div className="flex items-center p-1 bg-slate-100 rounded-2xl w-fit dark:bg-slate-800">
                 <button
                   onClick={() => setFilter("all")}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "all" ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "all" ? "bg-white text-primary shadow-sm dark:bg-[#1e2532] dark:text-blue-400" : "text-on-surface-variant hover:text-on-surface dark:text-slate-400 dark:hover:text-white"}`}
                 >
                   All Documents
                 </button>
                 <button
                   onClick={() => setFilter("drafts")}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "drafts" ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "drafts" ? "bg-white text-primary shadow-sm dark:bg-[#1e2532] dark:text-blue-400" : "text-on-surface-variant hover:text-on-surface dark:text-slate-400 dark:hover:text-white"}`}
                 >
                   Drafts
                 </button>
                 <button
                   onClick={() => setFilter("archived")}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "archived" ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${filter === "archived" ? "bg-white text-primary shadow-sm dark:bg-[#1e2532] dark:text-blue-400" : "text-on-surface-variant hover:text-on-surface dark:text-slate-400 dark:hover:text-white"}`}
                 >
                   Archived
                 </button>
@@ -271,7 +271,7 @@ export default function DocumentsPage() {
             <div className="bg-white rounded-lg shadow-[0_20px_40px_rgba(36,49,86,0.04)] overflow-hidden dark:bg-[#1e2532]">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50">
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/50">
                     <th className="py-5 px-6 w-12">
                       <input
                         className="rounded-sm border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-700"
@@ -298,7 +298,7 @@ export default function DocumentsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {loading ? (
                     <tr>
                       <td
@@ -330,7 +330,7 @@ export default function DocumentsPage() {
                     filteredDocuments.map((doc) => (
                       <tr
                         key={doc._id}
-                        className="group hover:bg-slate-50 transition-colors"
+                        className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                       >
                         <td className="py-5 px-6">
                           <input
@@ -356,7 +356,7 @@ export default function DocumentsPage() {
                           </div>
                         </td>
                         <td className="py-5 px-6">
-                          <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs font-bold font-mono">
+                          <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs font-bold font-mono dark:bg-blue-500/10 dark:text-blue-400">
                             #CASE-{doc._id.substring(0, 6).toUpperCase()}
                           </span>
                         </td>
@@ -374,7 +374,7 @@ export default function DocumentsPage() {
                         </td>
                         <td className="py-5 px-6">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${doc.status === "Approved" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${doc.status === "Approved" ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400" : "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400"}`}
                           >
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${doc.status === "Approved" ? "bg-green-500" : "bg-yellow-500"}`}

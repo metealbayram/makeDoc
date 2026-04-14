@@ -5,6 +5,7 @@ import LoginPage from "./components/LoginPage"
 import SignUpPage from "./components/SignUpPage"
 import DashboardPage from "./components/DashboardPage"
 import CreateDocumentPage from "./components/CreateDocumentPage"
+import VerifyDocumentPage from "./components/VerifyDocumentPage"
 
 import DocumentsPage from "./components/DocumentsPage"
 import CalendarPage from "./components/CalendarPage"
@@ -12,6 +13,7 @@ import FriendsPage from "./components/FriendsPage"
 import GroupsPage from "./components/GroupsPage"
 import MessagesPage from "./components/MessagesPage"
 import ClientsPage from "./components/ClientsPage"
+import ToolsPage from "./components/ToolsPage"
 import GlobalNotification from "./components/GlobalNotification"
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -67,6 +69,14 @@ export default function App() {
           }
         />
         <Route
+          path="/verify-document"
+          element={
+            <ProtectedRoute>
+              <VerifyDocumentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/calendar"
           element={
             <ProtectedRoute>
@@ -103,6 +113,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ClientsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools"
+          element={
+            <ProtectedRoute>
+              <ToolsPage />
             </ProtectedRoute>
           }
         />
