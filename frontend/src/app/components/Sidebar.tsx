@@ -19,6 +19,7 @@ export function Sidebar({
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: "grid_view" },
+    { name: "Edit Profile", href: "/profile/edit", icon: "manage_accounts" },
     { name: "Documents", href: "/documents", icon: "layers" },
     { name: "Verify File", href: "/verify-document", icon: "verified" },
     { name: "Clients", href: "/clients", icon: "assignment_ind" },
@@ -69,6 +70,16 @@ export function Sidebar({
               {userJob || "Premium Tier"}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate("/profile/edit")}
+            className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-[#334155] dark:text-slate-400 dark:hover:border-blue-500/30 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
+            title="Edit profile"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              edit_square
+            </span>
+          </button>
         </div>
       </div>
 
