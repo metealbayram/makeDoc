@@ -1,26 +1,53 @@
 import FriendRequest from '../models/friendRequest.js';
 import Lawyer from '../models/lawyer.js';
+import { createNotification } from "../utils/createNotification.js";
+import mongoose from 'mongoose';
 
 export const sendRequest = async (req, res, next) => {
     try {
         const senderId = req.lawyer._id;
         const { receiverId } = req.body;
 
-        if (senderId.toString() === receiverId) {
-            return res.status(400).json({ success: false, message: "Cannot send request to yourself" });
+        if (!receiverId) {
+            return res.status(400).json({
+                success: false,
+                message: "receiverId is required"
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid receiverId"
+            });
+        }
+
+        if (senderId.toString() === receiverId.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot send request to yourself"
+            });
         }
 
         const receiver = await Lawyer.findById(receiverId);
         if (!receiver) {
-            return res.status(404).json({ success: false, message: "User not found" });
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
         }
 
-        // Check if already friends
-        if (receiver.friends && receiver.friends.includes(senderId)) {
-            return res.status(400).json({ success: false, message: "Already friends" });
+        const alreadyFriends = (receiver.friends || []).some(
+            (friendId) => friendId.toString() === senderId.toString()
+        );
+
+        if (alreadyFriends) {
+            return res.status(400).json({
+                success: false,
+                message: "Already friends"
+            });
         }
 
-        // Check if request already exists
         const existingRequest = await FriendRequest.findOne({
             $or: [
                 { sender: senderId, receiver: receiverId },
@@ -30,12 +57,24 @@ export const sendRequest = async (req, res, next) => {
         });
 
         if (existingRequest) {
-            return res.status(400).json({ success: false, message: "Friend request already exists or you are already friends" });
+            return res.status(400).json({
+                success: false,
+                message: "Friend request already exists or you are already friends"
+            });
         }
 
-        const newRequest = await FriendRequest.create({ sender: senderId, receiver: receiverId });
-        res.status(201).json({ success: true, data: newRequest, message: "Friend request sent" });
+        const newRequest = await FriendRequest.create({
+            sender: senderId,
+            receiver: receiverId
+        });
+
+        res.status(201).json({
+            success: true,
+            data: newRequest,
+            message: "Friend request sent"
+        });
     } catch (error) {
+        console.error("sendRequest error:", error);
         next(error);
     }
 };

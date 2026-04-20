@@ -5,19 +5,30 @@ import crypto from 'crypto';
 import Event from '../models/Event.js';
 import Document from '../models/Document.js';
 import Lawyer from '../models/lawyer.js';
+import { createNotification } from "../utils/createNotification.js";
 
 const MARKER = '\n---SIGNATURE_DATA---\n';
 
 const getUserDocumentRole = (document, lawyerId) => {
     if (!document || !lawyerId) return null;
 
-    if (document.user.toString() === lawyerId.toString()) {
+    const ownerId = document.user?._id
+        ? document.user._id.toString()
+        : document.user?.toString?.();
+
+    const currentLawyerId = lawyerId?.toString?.();
+
+    if (ownerId === currentLawyerId) {
         return 'owner';
     }
 
-    const sharedUser = document.sharedWith?.find(
-        (item) => item.user.toString() === lawyerId.toString()
-    );
+    const sharedUser = document.sharedWith?.find((item) => {
+        const sharedUserId = item.user?._id
+            ? item.user._id.toString()
+            : item.user?.toString?.();
+
+        return sharedUserId === currentLawyerId;
+    });
 
     return sharedUser ? sharedUser.role : null;
 };
@@ -226,12 +237,38 @@ export const getDocumentById = async (req, res, next) => {
 
         const { document, role } = await getAccessibleDocument(id, req.lawyer._id, true);
 
+        console.log("----- getDocumentById DEBUG -----");
+        console.log("requested document id:", id);
+        console.log("req.lawyer._id:", req.lawyer?._id?.toString());
+        console.log("document exists:", !!document);
+
+        if (document) {
+            console.log("document.user:", document.user?._id ? document.user._id.toString() : document.user?.toString?.());
+            console.log("document.title:", document.title);
+            console.log(
+                "sharedWith:",
+                (document.sharedWith || []).map((item) => ({
+                    user: item.user?._id ? item.user._id.toString() : item.user?.toString?.(),
+                    role: item.role
+                }))
+            );
+        }
+
+        console.log("resolved role:", role);
+        console.log("--------------------------------");
+
         if (!document) {
             return res.status(404).json({ message: 'Document not found' });
         }
 
         if (!canView(role)) {
-            return res.status(403).json({ message: 'You do not have permission to view this document' });
+            return res.status(403).json({
+                message: 'You do not have permission to view this document',
+                debug: {
+                    requestedBy: req.lawyer?._id?.toString(),
+                    resolvedRole: role
+                }
+            });
         }
 
         res.status(200).json({
@@ -240,6 +277,7 @@ export const getDocumentById = async (req, res, next) => {
             data: document
         });
     } catch (error) {
+        console.error("getDocumentById error:", error);
         next(error);
     }
 };
@@ -477,6 +515,8 @@ export const shareDocument = async (req, res, next) => {
             (item) => item.user.toString() === lawyerToShare._id.toString()
         );
 
+        const wasAlreadyShared = Boolean(existingSharedUser);
+
         if (existingSharedUser) {
             existingSharedUser.role = role;
         } else {
@@ -488,6 +528,35 @@ export const shareDocument = async (req, res, next) => {
 
         await document.save();
 
+        const documentTitle = document.title || document.name || 'a document';
+        const ownerName = req.lawyer?.name || 'Someone';
+
+        await createNotification({
+            user: lawyerToShare._id,
+            type: 'document_shared',
+            title: wasAlreadyShared ? 'Document permission updated' : 'New document shared',
+            message: wasAlreadyShared
+                ? `${ownerName} updated your access for "${documentTitle}" to ${role}.`
+                : `${ownerName} shared "${documentTitle}" with you as ${role}.`,
+            sender: req.lawyer._id,
+            document: document._id,
+            meta: {
+                documentId: document._id,
+                role,
+                action: wasAlreadyShared ? 'updated' : 'shared'
+            }
+        });
+console.log("----- shareDocument DEBUG -----");
+console.log("owner:", req.lawyer?._id?.toString());
+console.log("shared target:", lawyerToShare._id.toString());
+console.log(
+    "updated sharedWith:",
+    (document.sharedWith || []).map((item) => ({
+        user: item.user?.toString?.(),
+        role: item.role
+    }))
+);
+console.log("--------------------------------");
         const updatedDocument = await Document.findById(document._id)
             .populate('user', 'name email')
             .populate('sharedWith.user', 'name email');

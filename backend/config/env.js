@@ -8,8 +8,14 @@ config({ path: envPath });
 
 
 export const {
-    MONGO_URI ,
+    MONGO_URI,
     PORT,
     JWT_SECRET,
-    JWT_EXPIRES_IN
+    JWT_EXPIRES_IN,
+    MAIL_HOST,
+    MAIL_PORT,
+    MAIL_SECURE,
+    MAIL_USER,
+    MAIL_PASS,
+    MAIL_FROM
 } = process.env;
