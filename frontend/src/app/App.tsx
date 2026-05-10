@@ -17,6 +17,7 @@ import ToolsPage from "./components/ToolsPage"
 import GlobalNotification from "./components/GlobalNotification"
 import VerifyCodePage from "./components/VerifyCodePage"
 import EditProfilePage from "./components/EditProfilePage"
+import FinancePage from "./components/FinancePage";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const token = localStorage.getItem("token")
@@ -36,6 +37,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+      
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/verify-code" element={<VerifyCodePage />} />
@@ -55,6 +57,14 @@ export default function App() {
                 </ProtectedRoute>
             }
         />
+        <Route
+  path="/finance"
+  element={
+    <ProtectedRoute>
+      <FinancePage />
+    </ProtectedRoute>
+  }
+/>
         <Route
           path="/dashboard"
           element={

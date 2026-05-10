@@ -36,13 +36,14 @@ export function Navbar({ userName, userProfileImage, onProfileImageUpdate }: Nav
 
   const totalNotifications = unreadMessages.length + friendRequests.length
 
-  const navLinks = [
-    { name: "Documents", href: "/documents" },
-    { name: "Friends", href: "/friends" },
-    { name: "Groups", href: "/groups" },
-    { name: "Calendar", href: "/calendar" },
-    { name: "Profile", href: "/profile/edit" },
-  ]
+ const navLinks = [
+  { name: "Documents", href: "/documents" },
+  { name: "Friends", href: "/friends" },
+  { name: "Groups", href: "/groups" },
+  { name: "Calendar", href: "/calendar" },
+  { name: "Finance", href: "/finance" },
+  { name: "Profile", href: "/profile/edit" },
+]
 
   const handleLogout = () => {
     localStorage.clear()

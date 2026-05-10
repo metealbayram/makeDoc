@@ -14,6 +14,7 @@ import clientsRouter from "./routes/clients.routes.js";
 import yargitayRouter from "./routes/yargitay.routes.js";
 import toolsRouter from "./routes/tools.routes.js";
 import notificationRouter from "./routes/notification.routes.js";
+import financeRouter from "./routes/finance.routes.js";
 
 const app = express();
 app.use(cors({
@@ -39,6 +40,8 @@ app.use('/yargitay', yargitayRouter);
 app.use('/tools', toolsRouter);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use("/api/notifications", notificationRouter);
+app.use('/finance', financeRouter);
+
 
 app.use((err, req, res, next) => {
     console.error(err);
