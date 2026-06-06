@@ -8,6 +8,10 @@ import {
   getFinanceCategories,
   createFinanceCategory,
   exportFinanceRecordsCsv,
+  createInvoice,
+  getInvoices,
+  updateInvoiceStatus,
+  downloadInvoicePdf,
 } from "../controller/finance.controller.js";
 
 import authorize from "../middlewares/auth.middleware.js";
@@ -25,6 +29,11 @@ router.get("/summary", getFinanceSummary);
 
 router.get("/categories", getFinanceCategories);
 router.post("/categories", createFinanceCategory);
+
+router.get("/invoices", getInvoices);
+router.post("/invoices", createInvoice);
+router.patch("/invoices/:id/status", updateInvoiceStatus);
+router.get("/invoices/:id/pdf", downloadInvoicePdf);
 
 router.get("/export", exportFinanceRecordsCsv);
 

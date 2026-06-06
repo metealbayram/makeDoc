@@ -83,10 +83,10 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Chat state
-  const [selectedFriendChat, setSelectedFriendChat] = useState<any | null>(
+  const [selectedFriendChat, setSelectedFriendChat] = useState< any | null>(
     null,
   );
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState< any[]>([]);
   const [chatMessageText, setChatMessageText] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -643,25 +643,6 @@ export default function DashboardPage() {
                 ))}
               </ul>
             </section>
-
-            {/* Status Card */}
-            <div className="bg-slate-900 p-8 rounded-lg text-white shadow-2xl relative overflow-hidden group dark:bg-[#1e2532]">
-              <div className="relative z-10">
-                <h4 className="text-xl font-black mb-2 font-headline">
-                  Cloud Workspace
-                </h4>
-                <p className="text-slate-400 text-sm mb-6">
-                  Securing all legal documents with 256-bit encryption.
-                </p>
-                <div className="h-1.5 w-full bg-white/10 rounded-full mb-6">
-                  <div className="h-full w-[45%] bg-primary rounded-full shadow-[0_0_10px_#0053dc]"></div>
-                </div>
-                <button className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-opacity-90 transition-all dark:bg-[#1e2532] dark:text-white">
-                  Manage License
-                </button>
-              </div>
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700"></div>
-            </div>
           </div>
         </div>
 

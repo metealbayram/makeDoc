@@ -19,6 +19,29 @@ interface FinanceCategory {
   name: string
 }
 
+interface Client {
+  _id: string
+  name: string
+  email?: string
+  phone?: string
+  tcNo?: string
+}
+
+interface Invoice {
+  _id: string
+  invoiceNumber: string
+  title: string
+  description?: string
+  amount: number
+  invoiceDate: string
+  dueDate: string
+  status: "draft" | "issued" | "paid" | "overdue"
+  clientName: string
+  clientEmail?: string
+  notes?: string
+  client?: Client
+}
+
 interface FinanceSummary {
   totalIncome: number
   totalExpense: number
@@ -39,11 +62,35 @@ const money = (value: number) =>
 
 const todayInput = () => new Date().toISOString().slice(0, 10)
 
+const monthStartInput = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), 1).toISOString().slice(0, 10)
+
+const loadFinanceBundle = async (month: number, year: number) => {
+  const [recordsRes, summaryRes, categoriesRes, clientsRes, invoicesRes] =
+    await Promise.all([
+    api.get(`/finance/records?month=${month}&year=${year}`),
+    api.get(`/finance/summary?month=${month}&year=${year}`),
+    api.get("/finance/categories"),
+    api.get("/clients"),
+    api.get("/finance/invoices"),
+  ])
+
+  return {
+    records: recordsRes.data || [],
+    summary: summaryRes.data || null,
+    categories: categoriesRes.data || [],
+    clients: clientsRes.data.data || [],
+    invoices: invoicesRes.data || [],
+  }
+}
+
 export default function FinancePage() {
   const now = new Date()
 
   const [records, setRecords] = useState<FinanceRecord[]>([])
   const [categories, setCategories] = useState<FinanceCategory[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [invoices, setInvoices] = useState<Invoice[]>([])
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
 
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -57,6 +104,24 @@ export default function FinancePage() {
 
   const [newCategory, setNewCategory] = useState("")
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [exportStartDate, setExportStartDate] = useState(monthStartInput(now))
+  const [exportEndDate, setExportEndDate] = useState(todayInput())
+  const [creatingInvoice, setCreatingInvoice] = useState(false)
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(
+    null,
+  )
+
+  const [invoiceClientId, setInvoiceClientId] = useState("")
+  const [invoiceTitle, setInvoiceTitle] = useState("")
+  const [invoiceDescription, setInvoiceDescription] = useState("")
+  const [invoiceAmount, setInvoiceAmount] = useState("")
+  const [invoiceDate, setInvoiceDate] = useState(todayInput())
+  const [invoiceDueDate, setInvoiceDueDate] = useState(todayInput())
+  const [invoiceStatus, setInvoiceStatus] = useState<
+    "draft" | "issued" | "paid" | "overdue"
+  >("issued")
+  const [invoiceNotes, setInvoiceNotes] = useState("")
 
   const [userName, setUserName] = useState("")
   const [userJob, setUserJob] = useState("")
@@ -67,6 +132,24 @@ export default function FinancePage() {
     return [current - 2, current - 1, current, current + 1]
   }, [])
 
+  const refreshFinanceData = async () => {
+    setLoading(true)
+
+    try {
+      const bundle = await loadFinanceBundle(month, year)
+      setRecords(bundle.records)
+      setSummary(bundle.summary)
+      setCategories(bundle.categories)
+      setClients(bundle.clients)
+      setInvoices(bundle.invoices)
+    } catch (error) {
+      console.error(error)
+      alert("Muhasebe verileri alinamadi.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     const storedName = localStorage.getItem("userName")
     const storedImage = localStorage.getItem("userProfileImage")
@@ -76,37 +159,34 @@ export default function FinancePage() {
     if (storedJob) setUserJob(storedJob)
 
     if (storedImage) {
-      if (storedImage.startsWith("http")) {
-        setUserProfileImage(storedImage)
-      } else {
-        setUserProfileImage(`http://localhost:5000${storedImage}`)
-      }
+      setUserProfileImage(
+        storedImage.startsWith("http")
+          ? storedImage
+          : `http://localhost:5000${storedImage}`,
+      )
     }
   }, [])
 
-  const loadFinanceData = async () => {
-    setLoading(true)
-
-    try {
-      const [recordsRes, summaryRes, categoriesRes] = await Promise.all([
-        api.get(`/finance/records?month=${month}&year=${year}`),
-        api.get(`/finance/summary?month=${month}&year=${year}`),
-        api.get("/finance/categories"),
-      ])
-
-      setRecords(recordsRes.data || [])
-      setSummary(summaryRes.data || null)
-      setCategories(categoriesRes.data || [])
-    } catch (error) {
-      console.error(error)
-      alert("Muhasebe verileri alınamadı.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    loadFinanceData()
+    const syncFinanceData = async () => {
+      setLoading(true)
+
+      try {
+        const bundle = await loadFinanceBundle(month, year)
+        setRecords(bundle.records)
+        setSummary(bundle.summary)
+        setCategories(bundle.categories)
+        setClients(bundle.clients)
+        setInvoices(bundle.invoices)
+      } catch (error) {
+        console.error(error)
+        alert("Muhasebe verileri alinamadi.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void syncFinanceData()
   }, [month, year])
 
   const handleProfileImageUpdate = async (
@@ -145,11 +225,11 @@ export default function FinancePage() {
     setCategory("")
   }
 
-  const handleCreateRecord = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateRecord = async (event: React.FormEvent) => {
+    event.preventDefault()
 
     if (!title || !amount || !date || !category) {
-      alert("Başlık, tutar, tarih ve kategori zorunludur.")
+      alert("Baslik, tutar, tarih ve kategori zorunludur.")
       return
     }
 
@@ -163,22 +243,22 @@ export default function FinancePage() {
       })
 
       resetForm()
-      await loadFinanceData()
+      await refreshFinanceData()
     } catch (error) {
       console.error(error)
-      alert("Kayıt eklenemedi.")
+      alert("Kayit eklenemedi.")
     }
   }
 
   const handleDeleteRecord = async (id: string) => {
-    if (!confirm("Bu kaydı silmek istiyor musun?")) return
+    if (!confirm("Bu kaydi silmek istiyor musun?")) return
 
     try {
       await api.delete(`/finance/records/${id}`)
-      await loadFinanceData()
+      await refreshFinanceData()
     } catch (error) {
       console.error(error)
-      alert("Kayıt silinemedi.")
+      alert("Kayit silinemedi.")
     }
   }
 
@@ -188,35 +268,148 @@ export default function FinancePage() {
     try {
       await api.post("/finance/categories", { name: newCategory.trim() })
       setNewCategory("")
-      await loadFinanceData()
+      await refreshFinanceData()
     } catch (error) {
       console.error(error)
       alert("Kategori eklenemedi veya zaten mevcut.")
     }
   }
 
-  const handleExport = async () => {
+  const resetInvoiceForm = () => {
+    setInvoiceClientId("")
+    setInvoiceTitle("")
+    setInvoiceDescription("")
+    setInvoiceAmount("")
+    setInvoiceDate(todayInput())
+    setInvoiceDueDate(todayInput())
+    setInvoiceStatus("issued")
+    setInvoiceNotes("")
+  }
+
+  const handleCreateInvoice = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (
+      !invoiceClientId ||
+      !invoiceTitle ||
+      !invoiceAmount ||
+      !invoiceDate ||
+      !invoiceDueDate
+    ) {
+      alert("Muvekkil, baslik, tutar, fatura tarihi ve vade tarihi zorunludur.")
+      return
+    }
+
+    setCreatingInvoice(true)
+
     try {
-      const res = await api.get(`/finance/export?month=${month}&year=${year}`, {
+      await api.post("/finance/invoices", {
+        clientId: invoiceClientId,
+        title: invoiceTitle,
+        description: invoiceDescription,
+        amount: Number(invoiceAmount),
+        invoiceDate,
+        dueDate: invoiceDueDate,
+        status: invoiceStatus,
+        notes: invoiceNotes,
+      })
+
+      resetInvoiceForm()
+      await refreshFinanceData()
+    } catch (error) {
+      console.error(error)
+      alert("Fatura olusturulamadi.")
+    } finally {
+      setCreatingInvoice(false)
+    }
+  }
+
+  const handleInvoiceStatusChange = async (
+    invoiceId: string,
+    status: "draft" | "issued" | "paid" | "overdue",
+  ) => {
+    try {
+      await api.patch(`/finance/invoices/${invoiceId}/status`, { status })
+      setInvoices((currentInvoices) =>
+        currentInvoices.map((invoice) =>
+          invoice._id === invoiceId ? { ...invoice, status } : invoice,
+        ),
+      )
+    } catch (error) {
+      console.error(error)
+      alert("Fatura durumu guncellenemedi.")
+    }
+  }
+
+  const handleDownloadInvoicePdf = async (
+    invoiceId: string,
+    invoiceNumber: string,
+  ) => {
+    setDownloadingInvoiceId(invoiceId)
+
+    try {
+      const response = await api.get(`/finance/invoices/${invoiceId}/pdf`, {
         responseType: "blob",
       })
 
-      const url = window.URL.createObjectURL(new Blob([res.data]))
-      const a = document.createElement("a")
+      const file = new Blob([response.data], { type: "application/pdf" })
+      const url = window.URL.createObjectURL(file)
+      const link = document.createElement("a")
 
-      a.href = url
-      a.download = `muhasebe-${year}-${month}.csv`
-      a.click()
+      link.href = url
+      link.download = `${invoiceNumber}.pdf`
+      link.click()
 
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error(error)
-      alert("Dışa aktarma başarısız.")
+      alert("Fatura PDF indirilemedi.")
+    } finally {
+      setDownloadingInvoiceId(null)
+    }
+  }
+
+  const handleExport = async () => {
+    if (!exportStartDate || !exportEndDate) {
+      alert("Baslangic ve bitis tarihi secmelisin.")
+      return
+    }
+
+    if (exportStartDate > exportEndDate) {
+      alert("Baslangic tarihi bitis tarihinden sonra olamaz.")
+      return
+    }
+
+    setExporting(true)
+
+    try {
+      const params = new URLSearchParams({
+        startDate: exportStartDate,
+        endDate: exportEndDate,
+      })
+
+      const response = await api.get(`/finance/export?${params.toString()}`, {
+        responseType: "blob",
+      })
+
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const anchor = document.createElement("a")
+
+      anchor.href = url
+      anchor.download = `muhasebe-${exportStartDate}-${exportEndDate}.csv`
+      anchor.click()
+
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error(error)
+      alert("Disa aktarma basarisiz.")
+    } finally {
+      setExporting(false)
     }
   }
 
   return (
-    <div className="bg-surface text-on-surface antialiased overflow-x-hidden min-h-screen dark:bg-[#111621] dark:text-white">
+    <div className="min-h-screen overflow-x-hidden bg-surface text-on-surface antialiased dark:bg-[#111621] dark:text-white">
       <Navbar
         userName={userName}
         userProfileImage={userProfileImage}
@@ -229,63 +422,107 @@ export default function FinancePage() {
         userProfileImage={userProfileImage}
       />
 
-      <main className="ml-0 lg:ml-64 pt-28 px-6 md:px-10 pb-12">
-        <div className="max-w-7xl mx-auto">
-          <header className="mb-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+      <main className="ml-0 px-6 pb-12 pt-28 md:px-10 lg:ml-64">
+        <div className="mx-auto max-w-7xl">
+          <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary font-bold text-sm mb-4">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-bold text-primary">
                 <span className="material-symbols-outlined text-[18px]">
                   payments
                 </span>
                 Finance Management
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white md:text-5xl">
                 Muhasebe
               </h1>
 
-              <p className="mt-3 text-slate-500 dark:text-slate-400 max-w-2xl">
-                Aylık gelir-gider kayıtlarını, kategorileri ve finansal özetini yönet.
+              <p className="mt-3 max-w-2xl text-slate-500 dark:text-slate-400">
+                Aylik gelir-gider kayitlarini, kategorileri ve finansal ozetini
+                yonet.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <select
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold dark:bg-[#1e2532] dark:border-[#2e3645]"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold dark:border-[#2e3645] dark:bg-[#1e2532]"
                 value={month}
-                onChange={(e) => setMonth(Number(e.target.value))}
+                onChange={(event) => setMonth(Number(event.target.value))}
               >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {m}. Ay
-                  </option>
-                ))}
+                {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                  (itemMonth) => (
+                    <option key={itemMonth} value={itemMonth}>
+                      {itemMonth}. Ay
+                    </option>
+                  ),
+                )}
               </select>
 
               <select
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold dark:bg-[#1e2532] dark:border-[#2e3645]"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold dark:border-[#2e3645] dark:bg-[#1e2532]"
                 value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
+                onChange={(event) => setYear(Number(event.target.value))}
               >
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
+                {years.map((itemYear) => (
+                  <option key={itemYear} value={itemYear}>
+                    {itemYear}
                   </option>
                 ))}
               </select>
-
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-primary text-white hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20"
-              >
-                <span className="material-symbols-outlined">download</span>
-                CSV Dışa Aktar
-              </button>
             </div>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <div className="bg-white p-8 rounded-lg shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+          <section className="mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-[0_20px_40px_rgba(36,49,86,0.06)] dark:border-[#2e3645] dark:bg-[#1e2532]">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                  Tarih Araligina Gore Aktar
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+                  Belirli iki tarih arasindaki gelir ve gider kayitlarini CSV
+                  olarak disa aktar.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                    Baslangic
+                  </label>
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(event) => setExportStartDate(event.target.value)}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold dark:border-[#2e3645] dark:bg-[#111621]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                    Bitis
+                  </label>
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(event) => setExportEndDate(event.target.value)}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold dark:border-[#2e3645] dark:bg-[#111621]"
+                  />
+                </div>
+
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-bold text-white transition-colors hover:bg-[#2b67e8] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <span className="material-symbols-outlined">download</span>
+                  {exporting ? "Aktariliyor..." : "CSV Disa Aktar"}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <div className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div className="rounded-lg bg-white p-8 shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Toplam Gelir
               </p>
@@ -294,7 +531,7 @@ export default function FinancePage() {
               </h3>
             </div>
 
-            <div className="bg-white p-8 rounded-lg shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+            <div className="rounded-lg bg-white p-8 shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Toplam Gider
               </p>
@@ -303,7 +540,7 @@ export default function FinancePage() {
               </h3>
             </div>
 
-            <div className="bg-white p-8 rounded-lg shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+            <div className="rounded-lg bg-white p-8 shadow-[0_10px_30px_-10px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Net Durum
               </p>
@@ -320,73 +557,75 @@ export default function FinancePage() {
           </div>
 
           <div className="grid grid-cols-12 gap-8">
-            <div className="col-span-12 lg:col-span-4 space-y-8">
-              <section className="bg-white rounded-lg p-6 shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
-                <h2 className="text-xl font-black mb-5">Yeni Gelir/Gider</h2>
+            <div className="col-span-12 space-y-8 lg:col-span-4">
+              <section className="rounded-lg bg-white p-6 shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+                <h2 className="mb-5 text-xl font-black">Yeni Gelir/Gider</h2>
 
                 <form onSubmit={handleCreateRecord} className="space-y-4">
                   <input
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-[#111621] dark:border-[#2e3645]"
-                    placeholder="Başlık"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    placeholder="Baslik"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(event) => setTitle(event.target.value)}
                   />
 
                   <input
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-[#111621] dark:border-[#2e3645]"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
                     placeholder="Tutar"
                     type="number"
                     min="0"
                     step="0.01"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(event) => setAmount(event.target.value)}
                   />
 
                   <input
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-[#111621] dark:border-[#2e3645]"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
                     type="date"
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(event) => setDate(event.target.value)}
                   />
 
                   <select
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-[#111621] dark:border-[#2e3645]"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
                     value={type}
-                    onChange={(e) => setType(e.target.value as FinanceType)}
+                    onChange={(event) =>
+                      setType(event.target.value as FinanceType)
+                    }
                   >
                     <option value="income">Gelir</option>
                     <option value="expense">Gider</option>
                   </select>
 
                   <input
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-[#111621] dark:border-[#2e3645]"
-                    placeholder="Kategori seç veya yaz"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    placeholder="Kategori sec veya yaz"
                     list="finance-categories"
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    onChange={(event) => setCategory(event.target.value)}
                   />
 
                   <datalist id="finance-categories">
-                    {categories.map((cat) => (
-                      <option key={cat._id} value={cat.name} />
+                    {categories.map((financeCategory) => (
+                      <option key={financeCategory._id} value={financeCategory.name} />
                     ))}
                   </datalist>
 
-                  <button className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-white hover:opacity-90 active:scale-95 transition-all">
+                  <button className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-white transition-colors hover:bg-[#2b67e8]">
                     Kaydet
                   </button>
                 </form>
               </section>
 
-              <section className="bg-white rounded-lg p-6 shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
-                <h2 className="text-xl font-black mb-5">Kategori Ekle</h2>
+              <section className="rounded-lg bg-white p-6 shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+                <h2 className="mb-5 text-xl font-black">Kategori Ekle</h2>
 
                 <div className="flex gap-2">
                   <input
-                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:bg-[#111621] dark:border-[#2e3645]"
-                    placeholder="Örn: Kira"
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-[#2e3645] dark:bg-[#111621]"
+                    placeholder="Orn: Kira"
                     value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
+                    onChange={(event) => setNewCategory(event.target.value)}
                   />
 
                   <button
@@ -398,21 +637,232 @@ export default function FinancePage() {
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  {categories.map((cat) => (
+                  {categories.map((financeCategory) => (
                     <span
-                      key={cat._id}
+                      key={financeCategory._id}
                       className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                     >
-                      {cat.name}
+                      {financeCategory.name}
                     </span>
                   ))}
                 </div>
               </section>
+
+              <section className="rounded-lg bg-white p-6 shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+                <div className="mb-5">
+                  <h2 className="text-xl font-black">Fatura Kes</h2>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Muvekkil secerek hizmete ait yeni fatura olustur.
+                  </p>
+                </div>
+
+                <form onSubmit={handleCreateInvoice} className="space-y-4">
+                  <select
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    value={invoiceClientId}
+                    onChange={(event) => setInvoiceClientId(event.target.value)}
+                  >
+                    <option value="">Muvekkil sec</option>
+                    {clients.map((client) => (
+                      <option key={client._id} value={client._id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    placeholder="Fatura basligi"
+                    value={invoiceTitle}
+                    onChange={(event) => setInvoiceTitle(event.target.value)}
+                  />
+
+                  <textarea
+                    className="min-h-[92px] w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    placeholder="Hizmet aciklamasi"
+                    value={invoiceDescription}
+                    onChange={(event) =>
+                      setInvoiceDescription(event.target.value)
+                    }
+                  />
+
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    placeholder="Fatura tutari"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={invoiceAmount}
+                    onChange={(event) => setInvoiceAmount(event.target.value)}
+                  />
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <input
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                      type="date"
+                      value={invoiceDate}
+                      onChange={(event) => setInvoiceDate(event.target.value)}
+                    />
+
+                    <input
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                      type="date"
+                      value={invoiceDueDate}
+                      onChange={(event) => setInvoiceDueDate(event.target.value)}
+                    />
+                  </div>
+
+                  <select
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    value={invoiceStatus}
+                    onChange={(event) =>
+                      setInvoiceStatus(
+                        event.target.value as
+                          | "draft"
+                          | "issued"
+                          | "paid"
+                          | "overdue",
+                      )
+                    }
+                  >
+                    <option value="draft">Taslak</option>
+                    <option value="issued">Kesildi</option>
+                    <option value="paid">Odendi</option>
+                    <option value="overdue">Gecikmis</option>
+                  </select>
+
+                  <textarea
+                    className="min-h-[80px] w-full rounded-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-[#2e3645] dark:bg-[#111621]"
+                    placeholder="Notlar"
+                    value={invoiceNotes}
+                    onChange={(event) => setInvoiceNotes(event.target.value)}
+                  />
+
+                  <button
+                    disabled={creatingInvoice || clients.length === 0}
+                    className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-white transition-colors hover:bg-[#2b67e8] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {creatingInvoice ? "Olusturuluyor..." : "Fatura Olustur"}
+                  </button>
+                </form>
+
+                {clients.length === 0 && (
+                  <p className="mt-3 text-sm text-amber-600 dark:text-amber-300">
+                    Once Clients bolumunden bir muvekkil eklemelisin.
+                  </p>
+                )}
+              </section>
             </div>
 
-            <div className="col-span-12 lg:col-span-8 space-y-8">
-              <section className="bg-white rounded-lg overflow-hidden shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
-                <div className="p-6 border-b border-slate-100 dark:border-[#2e3645]">
+            <div className="col-span-12 space-y-8 lg:col-span-8">
+              <section className="overflow-hidden rounded-lg bg-white shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+                <div className="border-b border-slate-100 p-6 dark:border-[#2e3645]">
+                  <h2 className="text-xl font-black">Faturalar</h2>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-[#111621]">
+                      <tr>
+                        <th className="p-4 text-left">Fatura No</th>
+                        <th className="p-4 text-left">Muvekkil</th>
+                        <th className="p-4 text-left">Baslik</th>
+                        <th className="p-4 text-left">Tutar</th>
+                        <th className="p-4 text-left">Kesim</th>
+                        <th className="p-4 text-left">Vade</th>
+                        <th className="p-4 text-left">Durum</th>
+                        <th className="p-4 text-left">PDF</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {invoices.map((invoice) => (
+                        <tr
+                          key={invoice._id}
+                          className="border-t border-slate-100 dark:border-[#2e3645]"
+                        >
+                          <td className="p-4 font-bold text-primary">
+                            {invoice.invoiceNumber}
+                          </td>
+                          <td className="p-4">
+                            <div className="font-semibold text-slate-900 dark:text-white">
+                              {invoice.clientName}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {invoice.clientEmail || "-"}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="font-semibold">{invoice.title}</div>
+                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                              {invoice.description || invoice.notes || "-"}
+                            </div>
+                          </td>
+                          <td className="p-4 font-semibold text-slate-900 dark:text-white">
+                            {money(invoice.amount)}
+                          </td>
+                          <td className="p-4">
+                            {new Date(invoice.invoiceDate).toLocaleDateString(
+                              "tr-TR",
+                            )}
+                          </td>
+                          <td className="p-4">
+                            {new Date(invoice.dueDate).toLocaleDateString("tr-TR")}
+                          </td>
+                          <td className="p-4">
+                            <select
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold dark:border-[#2e3645] dark:bg-[#111621]"
+                              value={invoice.status}
+                              onChange={(event) =>
+                                handleInvoiceStatusChange(
+                                  invoice._id,
+                                  event.target.value as
+                                    | "draft"
+                                    | "issued"
+                                    | "paid"
+                                    | "overdue",
+                                )
+                              }
+                            >
+                              <option value="draft">Taslak</option>
+                              <option value="issued">Kesildi</option>
+                              <option value="paid">Odendi</option>
+                              <option value="overdue">Gecikmis</option>
+                            </select>
+                          </td>
+                          <td className="p-4">
+                            <button
+                              onClick={() =>
+                                handleDownloadInvoicePdf(
+                                  invoice._id,
+                                  invoice.invoiceNumber,
+                                )
+                              }
+                              disabled={downloadingInvoiceId === invoice._id}
+                              className="rounded-lg bg-primary/10 px-3 py-2 font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {downloadingInvoiceId === invoice._id
+                                ? "Hazirlaniyor..."
+                                : "PDF"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+
+                      {!invoices.length && (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-slate-500">
+                            Henuz olusturulmus fatura yok.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="overflow-hidden rounded-lg bg-white shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+                <div className="border-b border-slate-100 p-6 dark:border-[#2e3645]">
                   <h2 className="text-xl font-black">Gelir - Gider Tablosu</h2>
                 </div>
 
@@ -454,11 +904,8 @@ export default function FinancePage() {
 
                       {!summary?.comparison?.length && (
                         <tr>
-                          <td
-                            colSpan={4}
-                            className="p-8 text-center text-slate-500"
-                          >
-                            Bu ay için gelir-gider karşılaştırması yok.
+                          <td colSpan={4} className="p-8 text-center text-slate-500">
+                            Bu ay icin gelir-gider karsilastirmasi yok.
                           </td>
                         </tr>
                       )}
@@ -467,11 +914,11 @@ export default function FinancePage() {
                 </div>
               </section>
 
-              <section className="bg-white rounded-lg overflow-hidden shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
-                <div className="p-6 border-b border-slate-100 dark:border-[#2e3645] flex items-center justify-between">
-                  <h2 className="text-xl font-black">Kayıtlar</h2>
+              <section className="overflow-hidden rounded-lg bg-white shadow-[0_20px_40px_rgba(36,49,86,0.08)] dark:bg-[#1e2532]">
+                <div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-[#2e3645]">
+                  <h2 className="text-xl font-black">Kayitlar</h2>
                   {loading && (
-                    <span className="text-sm text-slate-500">Yükleniyor...</span>
+                    <span className="text-sm text-slate-500">Yukleniyor...</span>
                   )}
                 </div>
 
@@ -479,12 +926,12 @@ export default function FinancePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 dark:bg-[#111621]">
                       <tr>
-                        <th className="p-4 text-left">Başlık</th>
+                        <th className="p-4 text-left">Baslik</th>
                         <th className="p-4 text-left">Tutar</th>
                         <th className="p-4 text-left">Tarih</th>
                         <th className="p-4 text-left">Tip</th>
                         <th className="p-4 text-left">Kategori</th>
-                        <th className="p-4 text-left">İşlem</th>
+                        <th className="p-4 text-left">Islem</th>
                       </tr>
                     </thead>
 
@@ -514,7 +961,7 @@ export default function FinancePage() {
                           <td className="p-4">
                             <button
                               onClick={() => handleDeleteRecord(record._id)}
-                              className="rounded-lg bg-red-50 px-3 py-2 text-red-600 font-bold hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
+                              className="rounded-lg bg-red-50 px-3 py-2 font-bold text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
                             >
                               Sil
                             </button>
@@ -524,11 +971,8 @@ export default function FinancePage() {
 
                       {!records.length && (
                         <tr>
-                          <td
-                            colSpan={6}
-                            className="p-8 text-center text-slate-500"
-                          >
-                            Bu ay için kayıt bulunamadı.
+                          <td colSpan={6} className="p-8 text-center text-slate-500">
+                            Bu ay icin kayit bulunamadi.
                           </td>
                         </tr>
                       )}

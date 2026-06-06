@@ -53,7 +53,7 @@ export default function LoginPage() {
       <main className="w-full max-w-md">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div className="min-w-0">
-              <Link to="/">
+              <Link to="/cd">
                   <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface dark:text-white cursor-pointer">
                       MakeDoc
                   </h1>

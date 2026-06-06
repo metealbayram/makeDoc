@@ -82,8 +82,14 @@ export const financeAPI = {
   createCategory: (name: string) =>
     api.post<FinanceCategory>("/finance/categories", { name }),
 
-  exportCsv: (month: number, year: number) =>
-    api.get(`/finance/export?month=${month}&year=${year}`, {
+  exportCsv: (params: {
+    month?: number;
+    year?: number;
+    startDate?: string;
+    endDate?: string;
+  }) =>
+    api.get("/finance/export", {
+      params,
       responseType: "blob",
     }),
 };
