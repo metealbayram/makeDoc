@@ -21,6 +21,7 @@ export function Sidebar({
     { name: "Dashboard", href: "/dashboard", icon: "grid_view" },
     { name: "Edit Profile", href: "/profile/edit", icon: "manage_accounts" },
     { name: "Documents", href: "/documents", icon: "layers" },
+    { name: "Templates", href: "/templates", icon: "style" },
     { name: "Verify File", href: "/verify-document", icon: "verified" },
     { name: "Clients", href: "/clients", icon: "assignment_ind" },
     { name: "Calendar", href: "/calendar", icon: "calendar_month" },

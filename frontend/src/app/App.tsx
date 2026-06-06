@@ -18,10 +18,12 @@ import GlobalNotification from "./components/GlobalNotification"
 import VerifyCodePage from "./components/VerifyCodePage"
 import EditProfilePage from "./components/EditProfilePage"
 import FinancePage from "./components/FinancePage";
+import TemplateBuilderPage from "./components/TemplateBuilderPage"
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const token = localStorage.getItem("token")
-  if (!token) {
+  if (!token || token === "undefined" || token === "null") {
+    localStorage.removeItem("token")
     return <Navigate to="/login" replace />
   }
   return (
@@ -65,6 +67,14 @@ export default function App() {
     </ProtectedRoute>
   }
 />
+        <Route
+          path="/templates"
+          element={
+            <ProtectedRoute>
+              <TemplateBuilderPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

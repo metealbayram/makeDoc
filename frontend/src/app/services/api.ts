@@ -19,6 +19,32 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const requestUrl = String(error?.config?.url || "");
+    const statusCode = error?.response?.status;
+
+    if (
+      statusCode === 401 &&
+      !requestUrl.startsWith("auth/") &&
+      !requestUrl.startsWith("/auth/")
+    ) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userJob");
+      localStorage.removeItem("userProfileImage");
+      localStorage.removeItem("pendingLoginEmail");
+
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 export type FinanceType = "income" | "expense";
 
 export interface FinanceRecord {

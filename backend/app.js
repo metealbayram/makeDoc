@@ -15,6 +15,7 @@ import yargitayRouter from "./routes/yargitay.routes.js";
 import toolsRouter from "./routes/tools.routes.js";
 import notificationRouter from "./routes/notification.routes.js";
 import financeRouter from "./routes/finance.routes.js";
+import templateRouter from "./routes/templates.routes.js";
 
 const app = express();
 app.use(cors({
@@ -41,9 +42,11 @@ app.use('/tools', toolsRouter);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use("/api/notifications", notificationRouter);
 app.use('/finance', financeRouter);
+app.use("/templates", templateRouter);
 
 
 app.use((err, req, res, next) => {
+    void next;
     console.error(err);
     const statusCode = err.statusCode || 500;
     const message = err.message || 'Internal Server Error';

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import api from "../services/api"
 import { Sidebar } from "./Sidebar"
 import { Navbar } from "./Navbar"
@@ -8,14 +8,89 @@ const INITIAL_CONTENT = `
 <p class="text-slate-400 italic">[Start typing or editing here...]</p>
 `
 
+interface ClientItem {
+  _id: string
+  name: string
+  tcNo?: string
+  phone?: string
+  address?: string
+  email?: string
+}
+
+interface SavedTemplateItem {
+  _id: string
+  title: string
+  contentHtml: string
+  placeholders?: string[]
+}
+
+interface ApiErrorShape {
+  response?: {
+    status?: number
+    data?: {
+      message?: string
+    }
+  }
+}
+
+const extractTemplatePlaceholders = (contentHtml: string) => {
+  const matches = String(contentHtml || "").match(/{{\s*[A-Z0-9_]+\s*}}/g) || []
+  return [...new Set(matches.map((item) => item.replace(/\s+/g, "")))]
+}
+
+const formatPlaceholderLabel = (placeholder: string) =>
+  placeholder
+    .replace(/[{}]/g, "")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(" ")
+
+const escapePlaceholderForRegex = (placeholder: string) =>
+  placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+const getClientTemplateDefaults = (client: ClientItem): Record<string, string> => ({
+  "{{MUVEKKIL_AD_SOYAD}}": client.name || "",
+  "{{MUVEKKIL_TC_NO}}": client.tcNo || "",
+  "{{MUVEKKIL_ADRES}}": client.address || "",
+  "{{MUVEKKIL_TELEFON}}": client.phone || "",
+  "{{MUVEKKIL_EMAIL}}": client.email || "",
+  "{{KIRACI_ADI_SOYADI}}": client.name || "",
+  "{{KIRACI_TC}}": client.tcNo || "",
+  "{{KIRACI_ADRES}}": client.address || "",
+})
+
+const buildTemplateHtmlFromValues = (
+  baseHtml: string,
+  placeholders: string[],
+  fieldValues: Record<string, string>,
+) => {
+  let nextHtml = baseHtml
+
+  for (const placeholder of placeholders) {
+    const value = fieldValues[placeholder]?.trim()
+    const replaceValue = value || placeholder
+    const pattern = new RegExp(escapePlaceholderForRegex(placeholder), "g")
+    nextHtml = nextHtml.replace(pattern, replaceValue)
+  }
+
+  return nextHtml
+}
+
 export default function CreateDocumentPage() {
   const { id } = useParams()
+  const location = useLocation()
   const [title, setTitle] = useState("")
   const [name, setName] = useState("")
   const [content, setContent] = useState(INITIAL_CONTENT)
   const [loading, setLoading] = useState(false)
-  const [clients, setClients] = useState<any[]>([])
+  const [clients, setClients] = useState<ClientItem[]>([])
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplateItem[]>([])
   const [selectedClientId, setSelectedClientId] = useState("")
+  const [selectedSavedTemplateId, setSelectedSavedTemplateId] = useState("")
+  const [selectedTemplateBaseHtml, setSelectedTemplateBaseHtml] = useState("")
+  const [activeTemplatePlaceholders, setActiveTemplatePlaceholders] = useState<string[]>([])
+  const [templateFieldValues, setTemplateFieldValues] = useState<Record<string, string>>({})
   const [isClientModalOpen, setIsClientModalOpen] = useState(false)
   const [templateType, setTemplateType] = useState("")
   const [newClient, setNewClient] = useState({
@@ -33,6 +108,7 @@ export default function CreateDocumentPage() {
   const [userName, setUserName] = useState("")
   const [userJob, setUserJob] = useState("")
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
+  const templateIdFromQuery = new URLSearchParams(location.search).get("templateId")
 
   useEffect(() => {
     if (!id) return
@@ -56,16 +132,17 @@ export default function CreateDocumentPage() {
         if (editorRef.current) {
           editorRef.current.innerHTML = doc.content || INITIAL_CONTENT
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorShape
         console.error("Failed to load document", error)
 
-        if (error?.response?.status === 403) {
+        if (apiError.response?.status === 403) {
           alert("Bu dokümanı düzenleme yetkin yok.")
           navigate("/documents")
           return
         }
 
-        if (error?.response?.status === 404) {
+        if (apiError.response?.status === 404) {
           alert("Doküman bulunamadı.")
           navigate("/documents")
           return
@@ -86,10 +163,15 @@ export default function CreateDocumentPage() {
 
     const fetchClients = async () => {
       try {
-        const res = await api.get("/clients")
-        setClients(res.data.data || [])
+        const [clientsRes, templatesRes] = await Promise.all([
+          api.get("/clients"),
+          api.get("/templates"),
+        ])
+
+        setClients(clientsRes.data.data || [])
+        setSavedTemplates(templatesRes.data || [])
       } catch (error) {
-        console.error("Failed to fetch clients", error)
+        console.error("Failed to fetch create-document dependencies", error)
       }
     }
 
@@ -111,6 +193,41 @@ export default function CreateDocumentPage() {
     fetchClients()
   }, [content, id])
 
+  useEffect(() => {
+    if (id || !templateIdFromQuery || !savedTemplates.length) return
+
+    const matchedTemplate = savedTemplates.find(
+      (template) => template._id === templateIdFromQuery,
+    )
+
+    if (!matchedTemplate) return
+
+    const templateHtml = matchedTemplate.contentHtml || INITIAL_CONTENT
+    const placeholders =
+      matchedTemplate.placeholders?.length
+        ? matchedTemplate.placeholders
+        : extractTemplatePlaceholders(templateHtml)
+    const initialFieldValues = placeholders.reduce<Record<string, string>>(
+      (accumulator, placeholder) => {
+        accumulator[placeholder] = ""
+        return accumulator
+      },
+      {},
+    )
+
+    setSelectedSavedTemplateId(matchedTemplate._id)
+    setTitle((currentTitle) => currentTitle || matchedTemplate.title || "")
+    setTemplateType(`saved:${matchedTemplate._id}`)
+    setSelectedTemplateBaseHtml(templateHtml)
+    setActiveTemplatePlaceholders(placeholders)
+    setTemplateFieldValues(initialFieldValues)
+    setContent(templateHtml)
+
+    if (editorRef.current) {
+      editorRef.current.innerHTML = templateHtml
+    }
+  }, [id, savedTemplates, templateIdFromQuery])
+
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -119,8 +236,9 @@ export default function CreateDocumentPage() {
       setIsClientModalOpen(false)
       setNewClient({ name: "", tcNo: "", phone: "", address: "", email: "" })
       alert("Client saved successfully!")
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Failed to create client")
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape
+      alert(apiError.response?.data?.message || "Failed to create client")
     }
   }
 
@@ -132,6 +250,22 @@ export default function CreateDocumentPage() {
     if (!client) return
 
     setName(client.name)
+
+    if (activeTemplatePlaceholders.length) {
+      const clientDefaults = getClientTemplateDefaults(client)
+
+      setTemplateFieldValues((currentValues) => {
+        const nextValues = { ...currentValues }
+
+        for (const placeholder of activeTemplatePlaceholders) {
+          if (!nextValues[placeholder] && clientDefaults[placeholder]) {
+            nextValues[placeholder] = clientDefaults[placeholder]
+          }
+        }
+
+        return nextValues
+      })
+    }
   }
 
   const handleApplyClientToDocument = () => {
@@ -155,10 +289,93 @@ export default function CreateDocumentPage() {
     }
   }
 
+  const handleApplySavedTemplate = (templateId: string) => {
+    setSelectedSavedTemplateId(templateId)
+    if (!templateId) {
+      setSelectedTemplateBaseHtml("")
+      setActiveTemplatePlaceholders([])
+      setTemplateFieldValues({})
+      return
+    }
+
+    const template = savedTemplates.find((item) => item._id === templateId)
+    if (!template) return
+
+    const templateHtml = template.contentHtml || INITIAL_CONTENT
+    const placeholders =
+      template.placeholders?.length
+        ? template.placeholders
+        : extractTemplatePlaceholders(templateHtml)
+    const initialFieldValues = placeholders.reduce<Record<string, string>>(
+      (accumulator, placeholder) => {
+        accumulator[placeholder] = ""
+        return accumulator
+      },
+      {},
+    )
+    const selectedClient = clients.find((client) => client._id === selectedClientId)
+
+    if (selectedClient) {
+      const clientDefaults = getClientTemplateDefaults(selectedClient)
+
+      for (const placeholder of placeholders) {
+        if (clientDefaults[placeholder]) {
+          initialFieldValues[placeholder] = clientDefaults[placeholder]
+        }
+      }
+    }
+
+    setTemplateType(`saved:${template._id}`)
+    setTitle((currentTitle) => currentTitle || template.title || "")
+    setSelectedTemplateBaseHtml(templateHtml)
+    setActiveTemplatePlaceholders(placeholders)
+    setTemplateFieldValues(initialFieldValues)
+    setContent(templateHtml)
+
+    if (editorRef.current) {
+      editorRef.current.innerHTML = templateHtml
+    }
+  }
+
+  const handleTemplateFieldChange = (placeholder: string, value: string) => {
+    setTemplateFieldValues((currentValues) => ({
+      ...currentValues,
+      [placeholder]: value,
+    }))
+  }
+
+  const handleApplyTemplateFields = () => {
+    if (!selectedTemplateBaseHtml) return
+
+    const nextHtml = buildTemplateHtmlFromValues(
+      selectedTemplateBaseHtml,
+      activeTemplatePlaceholders,
+      templateFieldValues,
+    )
+
+    if (editorRef.current) {
+      editorRef.current.innerHTML = nextHtml
+    }
+
+    setContent(nextHtml)
+  }
+
   const handleCreate = async () => {
     setLoading(true)
     try {
-      const currentContent = editorRef.current ? editorRef.current.innerHTML : content
+      const editorContent = editorRef.current ? editorRef.current.innerHTML : content
+      const currentContent =
+        selectedTemplateBaseHtml && activeTemplatePlaceholders.length
+          ? buildTemplateHtmlFromValues(
+              selectedTemplateBaseHtml,
+              activeTemplatePlaceholders,
+              templateFieldValues,
+            )
+          : editorContent
+
+      if (editorRef.current && currentContent !== editorContent) {
+        editorRef.current.innerHTML = currentContent
+      }
 
       if (id) {
         await api.put(`/documents/${id}`, {
@@ -176,9 +393,10 @@ export default function CreateDocumentPage() {
       }
 
       navigate("/documents")
-    } catch (err: any) {
-      console.error(err)
-      alert(err?.response?.data?.message || "Failed to save document")
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape
+      console.error(error)
+      alert(apiError.response?.data?.message || "Failed to save document")
     } finally {
       setLoading(false)
     }
@@ -194,12 +412,20 @@ export default function CreateDocumentPage() {
       editorRef.current.innerHTML = INITIAL_CONTENT
       setContent(INITIAL_CONTENT)
     }
+    setSelectedTemplateBaseHtml("")
+    setActiveTemplatePlaceholders([])
+    setTemplateFieldValues({})
+    setSelectedSavedTemplateId("")
   }
 
   const insertTemplate = (type: string) => {
     if (!editorRef.current) return
 
     setTemplateType(type)
+    setSelectedSavedTemplateId("")
+    setSelectedTemplateBaseHtml("")
+    setActiveTemplatePlaceholders([])
+    setTemplateFieldValues({})
 
     let templateHtml = ""
 
@@ -553,6 +779,86 @@ export default function CreateDocumentPage() {
                 </button>
               </div>
             </div>
+
+            <div className="col-span-12 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+              <label className="block text-[11px] uppercase tracking-widest text-on-surface-variant font-bold mb-3 dark:text-slate-400">
+                Saved Template
+              </label>
+
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="relative flex-1">
+                  <select
+                    className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl py-4 pl-5 pr-10 appearance-none text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-primary/15 transition-all outline-none"
+                    value={selectedSavedTemplateId}
+                    onChange={(e) => handleApplySavedTemplate(e.target.value)}
+                  >
+                    <option value="">Saved template sec...</option>
+                    {savedTemplates.map((template) => (
+                      <option key={template._id} value={template._id}>
+                        {template.title}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant dark:text-slate-400">
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/templates")}
+                  className="rounded-xl border border-slate-200 px-5 py-4 font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-blue-500/30 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
+                >
+                  Templates sayfasini ac
+                </button>
+              </div>
+            </div>
+
+            {!!activeTemplatePlaceholders.length && (
+              <div className="col-span-12 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-widest text-on-surface-variant font-bold mb-3 dark:text-slate-400">
+                      Template Variables
+                    </label>
+                    <p className="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+                      Bu sablonda tanimlanan degiskenleri doldur. Alanlari belgeye
+                      uygula dediginde
+                      {" "}
+                      <code>{"{{DEGISKEN}}"}</code>
+                      {" "}
+                      alanlari otomatik olarak yer degistirir.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleApplyTemplateFields}
+                    className="rounded-xl bg-primary px-5 py-3 font-bold text-white transition hover:bg-[#2b67e8]"
+                  >
+                    Alanlari Belgeye Uygula
+                  </button>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {activeTemplatePlaceholders.map((placeholder) => (
+                    <div key={placeholder}>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                        {formatPlaceholderLabel(placeholder)}
+                      </label>
+                      <input
+                        value={templateFieldValues[placeholder] || ""}
+                        onChange={(event) =>
+                          handleTemplateFieldChange(placeholder, event.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-medium text-slate-900 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-500/40 dark:focus:ring-blue-500/10"
+                        placeholder={`${formatPlaceholderLabel(placeholder)} gir`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl shadow-[0_32px_64px_rgba(0,0,0,0.04)] overflow-hidden border border-slate-200">
