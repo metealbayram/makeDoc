@@ -245,15 +245,25 @@ export default function ClientsPage() {
               </div>
               <div className="space-y-1">
                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest pl-1 dark:text-slate-400">Address</label>
-                 <input
-                    className="w-full p-3.5 rounded-2xl border-none ring-1 ring-slate-200 dark:ring-slate-700 bg-slate-50 dark:bg-slate-900/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+                 <textarea
+                    className="w-full p-3.5 rounded-2xl border-none ring-1 ring-slate-200 dark:ring-slate-700 bg-slate-50 dark:bg-slate-900/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow resize-none"
                     placeholder="Full registered address"
-                    type="text"
+                    rows={3}
                     value={newClient.address}
                     onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
                  />
               </div>
-              
+              <div className="space-y-1">
+                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest pl-1 dark:text-slate-400">Email</label>
+                 <input
+                    className="w-full p-3.5 rounded-2xl border-none ring-1 ring-slate-200 dark:ring-slate-700 bg-slate-50 dark:bg-slate-900/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+                    placeholder="client@example.com"
+                    type="email"
+                    value={newClient.email}
+                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                 />
+              </div>
+
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"

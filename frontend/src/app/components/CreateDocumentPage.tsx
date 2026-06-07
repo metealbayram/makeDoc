@@ -971,6 +971,27 @@ export default function CreateDocumentPage() {
                 onChange={(e) => setNewClient({ ...newClient, tcNo: e.target.value })}
                 required
               />
+              <input
+                className="w-full h-11 px-4 rounded-xl border-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                placeholder="Phone Number"
+                type="tel"
+                value={newClient.phone}
+                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+              />
+              <input
+                className="w-full h-11 px-4 rounded-xl border-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                placeholder="Email"
+                type="email"
+                value={newClient.email}
+                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+              />
+              <textarea
+                className="w-full px-4 py-3 rounded-xl border-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                placeholder="Address"
+                rows={3}
+                value={newClient.address}
+                onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+              />
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
