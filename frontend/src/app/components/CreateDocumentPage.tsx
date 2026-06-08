@@ -345,10 +345,16 @@ export default function CreateDocumentPage() {
   }
 
   const handleApplyTemplateFields = () => {
-    if (!selectedTemplateBaseHtml) return
+    let baseHtml = selectedTemplateBaseHtml
+
+    if (!baseHtml) {
+      baseHtml = editorRef.current?.innerHTML || ""
+      if (!baseHtml) return
+      setSelectedTemplateBaseHtml(baseHtml)
+    }
 
     const nextHtml = buildTemplateHtmlFromValues(
-      selectedTemplateBaseHtml,
+      baseHtml,
       activeTemplatePlaceholders,
       templateFieldValues,
     )
@@ -672,6 +678,18 @@ export default function CreateDocumentPage() {
     if (templateHtml) {
       editorRef.current.innerHTML = templateHtml
       setContent(templateHtml)
+
+      const placeholders = extractTemplatePlaceholders(templateHtml)
+      const initialFieldValues = placeholders.reduce<Record<string, string>>(
+        (acc, placeholder) => {
+          acc[placeholder] = ""
+          return acc
+        },
+        {},
+      )
+      setSelectedTemplateBaseHtml(templateHtml)
+      setActiveTemplatePlaceholders(placeholders)
+      setTemplateFieldValues(initialFieldValues)
     }
   }
 
