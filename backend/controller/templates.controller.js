@@ -48,7 +48,7 @@ const formatConversionWarnings = (messages = []) =>
     })
     .filter(Boolean);
 
-const postProcessConvertedHtml = (rawHtml) => {
+const postProcessConvertedHtml = (rawHtml, paragraphAlignments = []) => {
   const html = sanitizeHtmlInput(rawHtml);
 
   if (!html) {
@@ -166,6 +166,19 @@ const postProcessConvertedHtml = (rawHtml) => {
       span.replaceWith(...span.childNodes);
     }
   });
+
+  if (paragraphAlignments.length) {
+    const blockElements = [
+      ...document.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li"),
+    ];
+    blockElements.forEach((element, index) => {
+      const alignment = paragraphAlignments[index];
+      if (alignment && alignment !== "left") {
+        const textAlign = alignment === "both" ? "justify" : alignment;
+        appendInlineStyle(element, `text-align: ${textAlign};`);
+      }
+    });
+  }
 
   const wrapper = document.createElement("div");
   wrapper.setAttribute("class", "template-word-content");
@@ -324,6 +337,8 @@ export const convertWordToTemplateHtml = async (req, res) => {
       });
     }
 
+    const paragraphAlignments = [];
+
     const result = await mammoth.convertToHtml(
       { buffer: req.file.buffer },
       {
@@ -340,10 +355,14 @@ export const convertWordToTemplateHtml = async (req, res) => {
         ],
         ignoreEmptyParagraphs: false,
         convertImage: mammoth.images.dataUri,
+        transformDocument: mammoth.transforms.paragraph(function (paragraph) {
+          paragraphAlignments.push(paragraph.alignment || null);
+          return paragraph;
+        }),
       },
     );
 
-    const contentHtml = postProcessConvertedHtml(result.value);
+    const contentHtml = postProcessConvertedHtml(result.value, paragraphAlignments);
 
     if (!contentHtml) {
       return res.status(400).json({
